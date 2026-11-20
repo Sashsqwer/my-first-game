@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0D0F14">
+<meta name="format-detection" content="telephone=no">
+<title>Стартап с нуля</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230D0F14'/><text x='50' y='70' font-size='60' text-anchor='middle'>🚀</text></svg>">
+<link rel="stylesheet" href="style.css?v=1">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<div id="app" hidden>
+  <header class="top">
+    <div class="top-row">
+      <div class="money" id="money" aria-live="off">0 <span>₽</span></div>
+      <button class="icon-btn" id="btn-settings" aria-label="Настройки">⚙️</button>
+    </div>
+    <div class="rate" id="rate">+0 ₽/сек · пока тебя нет, тоже</div>
+    <div class="chips">
+      <button class="chip chip-room" id="chip-room"></button>
+      <button class="chip chip-lock" id="chip-lock"></button>
+    </div>
+  </header>
+
+  <main class="views">
+    <section class="view active" id="view-office">
+      <div class="board" id="board">
+        <div class="grid" id="grid"></div>
+        <button class="next-room" id="next-room"></button>
+      </div>
+      <p class="hint" id="hint">Перетащи двух одинаковых друг на друга — уровень выше</p>
+      <div class="actions">
+        <button class="btn btn-primary" id="btn-hire">➕ Нанять · 50 ₽</button>
+        <button class="btn btn-dark" id="btn-daily">🎁 Бонус дня<i class="dot" id="daily-dot"></i></button>
+      </div>
+    </section>
+
+    <section class="view" id="view-upgrades">
+      <h2 class="view-title">🚀 Улучшения</h2>
+      <div class="list" id="upgrades"></div>
+      <h3 class="sub-title">🏢 Помещения</h3>
+      <div class="list" id="rooms-list"></div>
+      <h3 class="sub-title">👥 Команда</h3>
+      <div class="list" id="team"></div>
+    </section>
+
+    <section class="view" id="view-rating">
+      <div class="soon">
+        <div class="soon-ico">🏆</div>
+        <h2>Рейтинг — скоро</h2>
+        <p>Соревнуйся с друзьями и со всеми игроками за неделю. Мерило — оценка компании.</p>
+        <div class="stat"><span>Твоя компания заработала</span><b id="earned">0 ₽</b></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-friends">
+      <div class="soon">
+        <div class="soon-ico">👥</div>
+        <h2>Друзья — скоро</h2>
+        <p>Зови друзей: за каждого вы оба получите редкого сотрудника. За 3, 10 и 25 друзей — особые награды.</p>
+        <button class="btn btn-primary btn-wide" id="btn-invite">📨 Пригласить</button>
+      </div>
+    </section>
+
+    <section class="view" id="view-shop">
+      <div class="soon">
+        <div class="soon-ico">🛍️</div>
+        <h2>Магазин</h2>
+        <p>Скоро — скины и ускорения.</p>
+        <div class="shop-empty">
+          <div>🎨<span>Скины офиса</span></div>
+          <div>⚡<span>Буст ×2</span></div>
+          <div>🦄<span>Редкие</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" id="tabbar">
+    <button class="tab active" data-view="office"><i>🏢</i><span>Офис</span></button>
+    <button class="tab" data-view="upgrades"><i>🚀</i><span>Улучшения</span></button>
+    <button class="tab" data-view="rating"><i>🏆</i><span>Рейтинг</span></button>
+    <button class="tab" data-view="friends"><i>👥</i><span>Друзья</span></button>
+    <button class="tab" data-view="shop"><i>🛍️</i><span>Магазин</span></button>
+  </nav>
+</div>
+
+<div id="choose" class="choose" hidden>
+  <div class="choose-head">
+    <div class="logo">🚀</div>
+    <h1>Стартап <span>с нуля</span></h1>
+    <p>Выбери, с чего начнёшь свою империю</p>
+  </div>
+  <div class="choose-list" id="choose-list"></div>
+</div>
+
+<div id="fx" class="fx"></div>
+<div id="tutor" class="tutor" hidden></div>
+<div id="modal" class="modal" hidden></div>
+<div id="toast" class="toast"></div>
+
+<script src="balance.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body>
+</html>
