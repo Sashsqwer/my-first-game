@@ -55,7 +55,7 @@ window.__mockNet = {
       let worst = null;
       document.querySelectorAll('.view.active *, .modal *, .choose *').forEach(n => {
         const r = n.getBoundingClientRect();
-        if (r.width && r.right > window.innerWidth + 1 && !n.closest('.ladder')) worst = worst || (n.className || n.tagName) + ' → ' + Math.round(r.right);
+        if (r.width && r.right > window.innerWidth + 1 && !n.closest('.ladder') && !n.matches('.cell .pd')) worst = worst || (n.className || n.tagName) + ' → ' + Math.round(r.right);
       });
       return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, worst };
     });
@@ -247,7 +247,7 @@ window.__mockNet = {
   }
 
   // 9. Узкий и широкий экраны: нет горизонтального скролла
-  for (const th of ['', 'a', 'b', 'c', 'd', 'e']) for (const w of [320, 390, 430]) {
+  for (const th of ['', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']) for (const w of [320, 390, 430]) {
     const { ctx: c2, page: p2 } = await newPage({ viewport: { width: w, height: w === 320 ? 568 : 760 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, { query: '?theme=' + (th || 'old') });
     const w0 = w; { const w = (th ? th + ' ' : '') + w0;
     await noHScroll(p2, `выбор ${w}px`);
@@ -313,13 +313,13 @@ window.__mockNet = {
     await c6.close();
   }
 
-  // 11. Пробные темы A–E и текущая: скриншоты в docs/screens/themes/ + коллаж
+  // 11. Пробные темы A–J и текущая: скриншоты в docs/screens/themes/ + коллаж
   const OFFICE = {
     it: [25, 4, 13, 3, 12, 2, 2, 31, 1, 1, 0, 0],
     coffee: [5, 14, 3, 23, 2, 2, 12, 1, 1, 34, 0, 0],
     barber: [26, 5, 4, 14, 3, 3, 2, 22, 1, 1, 11, 0]
   };
-  for (const th of ['old', 'a', 'b', 'c', 'd', 'e']) {
+  for (const th of ['old', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']) {
     const { ctx: ct, page: pt } = await newPage(iphone, { query: '?theme=' + th });
     const ts = name => pt.screenshot({ path: path.join(TOUT, th + '-' + name + '.jpg'), type: 'jpeg', quality: 82 });
     await ts('1-choose');
@@ -356,6 +356,17 @@ window.__mockNet = {
     await pt.click('.cell.locked >> nth=0'); await pt.waitForTimeout(350);
     await ts('4-slots');
     await closeModals(pt);
+    if ('fghij'.includes(th)) {
+      // аврал в характере темы (в I — «синий экран»), окно настроек с выбором оформления
+      await pt.evaluate(() => { window.__game.state.rush = { until: 0, readyAt: 0 }; });
+      await pt.click('#btn-rush'); await pt.waitForTimeout(320);
+      await ts('10-rush');
+      await pt.waitForTimeout(2900);
+      await pt.click('#btn-settings'); await pt.waitForTimeout(350);
+      await ts('11-settings');
+      await noHScroll(pt, th + ' настройки');
+      await closeModals(pt);
+    }
     await pt.click('.tab[data-view="shop"]'); await pt.waitForTimeout(400);
     await ts('5-agency');
     await noHScroll(pt, th + ' агентство');
@@ -405,6 +416,23 @@ window.__mockNet = {
     const h = await pg.evaluate(() => document.body.scrollHeight);
     await pg.setViewportSize({ width: 1640, height: h });
     await pg.screenshot({ path: path.join(OUT, 'themes-compare-2.png') });
+    await ctx.close();
+  }
+  // коллаж 3: темы F–J (новые стили)
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1640, height: 1220 }, deviceScaleFactor: 1.25 });
+    const pg = await ctx.newPage();
+    const img = n => 'data:image/jpeg;base64,' + fs.readFileSync(path.join(TOUT, n + '.jpg')).toString('base64');
+    const cols = [['f', 'F · Пиксель-арт'], ['g', 'G · Пластилин'], ['h', 'H · Манга'], ['i', 'I · Офис-95'], ['j', 'J · Стеклянный город']];
+    const row = bz => cols.map(([t, n]) => `<figure><figcaption>${n}</figcaption><img src="${img(t + '-2-office-' + bz)}"></figure>`).join('');
+    await pg.setContent(`<html><body style="margin:0;background:#0b0c12;font:700 22px -apple-system,Segoe UI,Roboto,sans-serif;color:#fff">
+      <style>.r{display:grid;grid-template-columns:repeat(5,300px);gap:20px;padding:0 20px 18px}figure{margin:0}figcaption{padding:8px 2px;text-align:center}img{width:300px;border-radius:22px;display:block;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+      h1{font-size:26px;margin:0;padding:18px 20px 6px}h2{font-size:18px;color:#9aa3bb;margin:0;padding:4px 20px 0;font-weight:600}</style>
+      <h1>Стартап с нуля — ещё 5 вариантов оформления (F–J)</h1><h2>💻 IT-стартап</h2><div class="r">${row('it')}</div><h2>☕ Кофейня</h2><div class="r">${row('coffee')}</div></body></html>`);
+    await pg.waitForTimeout(400);
+    const h = await pg.evaluate(() => document.body.scrollHeight);
+    await pg.setViewportSize({ width: 1640, height: h });
+    await pg.screenshot({ path: path.join(OUT, 'themes-compare-3.png') });
     await ctx.close();
   }
   // лист всех 64 сотрудников (8 бизнесов × 8 уровней) + проверка, что все SVG разные

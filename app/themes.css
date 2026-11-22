@@ -210,6 +210,8 @@ html[data-theme="a"] .cell .pd::before { content: ""; position: absolute; left: 
 html[data-theme="a"] .cell .pd::after { content: ""; position: absolute; left: 8%; right: 8%; bottom: 82%; height: 190%; pointer-events: none;
   background: linear-gradient(0deg, rgba(var(--biz-rgb), .38), rgba(var(--biz-rgb), 0)); clip-path: polygon(0 100%, 100% 100%, 82% 0, 18% 0); }
 html[data-theme="a"] .cell .em { position: relative; z-index: 2; font-size: min(9vw, 36px, calc(var(--ch) * .47)); filter: drop-shadow(0 4px 2px rgba(0, 0, 0, .55)); }
+/* сотрудник стоит на верхней площадке подиума, имя — на его передней стенке (не наезжает на фигурку) */
+html[data-theme="a"] .cell .em .av { height: calc(var(--ch) * .62); }
 html[data-theme="a"] .cell .nm { position: absolute; left: 10%; right: 10%; bottom: 3px; z-index: 2; margin: 0; max-width: none; color: #DCE6FF; font-weight: 800;
   font-size: min(9.5px, calc(var(--ch) * .135)); -webkit-line-clamp: 1; letter-spacing: .1px; text-shadow: 0 1px 1px #000; }
 html[data-theme="a"] .cell .lv { z-index: 3; top: 1px; left: 1px; min-width: 19px; height: 19px; padding: 0 4px; display: grid; place-items: center; font-size: 12px; font-weight: 900;
@@ -372,6 +374,7 @@ html[data-theme="b"] .cell { border-radius: 18px; border: 1px solid rgba(255, 22
 html[data-theme="b"] .cell .pd { display: block; position: absolute; left: 20%; right: 20%; bottom: calc(var(--ch) * .27); height: calc(var(--ch) * .14); border-radius: 50%; z-index: 0;
   background: radial-gradient(ellipse at 50% 35%, #4a3a5c, #1e1628 70%); box-shadow: 0 0 0 1.5px rgba(243, 192, 99, .75), 0 4px 0 #6d4714, 0 5px 0 rgba(243, 192, 99, .45), 0 10px 14px -4px rgba(0, 0, 0, .9); }
 html[data-theme="b"] .cell .em { position: relative; z-index: 2; font-size: min(8.6vw, 32px, calc(var(--ch) * .42)); filter: drop-shadow(0 5px 3px rgba(0, 0, 0, .55)); }
+html[data-theme="b"] .cell .em .av { height: calc(var(--ch) * .6); }
 html[data-theme="b"] .cell .nm { position: absolute; left: 4px; right: 4px; bottom: 2px; margin: 0; z-index: 2; color: #E9DFF3; font-weight: 600; letter-spacing: .2px; -webkit-line-clamp: 1; font-size: min(9.5px, calc(var(--ch) * .135)); }
 html[data-theme="b"] .cell .lv { top: 4px; left: 5px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; font-weight: 900; color: #3a2100; background: var(--gold); box-shadow: 0 1px 4px rgba(0, 0, 0, .6); z-index: 3; }
 html[data-theme="b"] .cell .rt { z-index: 3; border-radius: 8px; }

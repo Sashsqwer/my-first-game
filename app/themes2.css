@@ -91,7 +91,9 @@ html[data-theme="d"] .grid { gap: 7px 3px; }
 
 /* Клетка = комнатка */
 html[data-theme="d"] .cell { background: transparent; border: 0; border-radius: 0; padding: 0; overflow: visible; justify-content: flex-end; }
-html[data-theme="d"] .cell .rm { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; z-index: 0; }
+html[data-theme="d"] .cell .rm { position: absolute; top: 0; bottom: 0; left: 50%; width: min(100%, calc(var(--ch) * 1.06)); height: 100%; transform: translateX(-50%); overflow: visible; z-index: 0; }
+/* при 4–5 рядах клетка ниже — комнатка сохраняет пропорции (не сплющивается), а бейджи прижимаются к ней */
+html[data-theme="d"] .cell { --rmw: min(100%, calc(var(--ch) * 1.06)); }
 .rm { display: none; }
 html[data-theme="d"] .rm { display: block; }
 html[data-theme="d"] .rm-sl { fill: #2a2f66; }
@@ -417,3 +419,6 @@ html[data-theme="e"] .biz .bi { border: 2px solid var(--ink); border-radius: 50%
 
 /* общее: ряд закрытых мест в D и E — карточки/лента, без «железа» A */
 html[data-theme="e"] .grid.lockrow .cell.locked .nm { font-size: 10.5px; }
+html[data-theme="d"] .cell:not(.locked) .lv { left: calc((100% - var(--rmw)) / 2); }
+html[data-theme="d"] .cell:not(.locked) .rt { right: calc((100% - var(--rmw)) / 2); }
+html[data-theme="d"] .grid.lockrow .cell.locked .nm { left: auto; bottom: auto; }

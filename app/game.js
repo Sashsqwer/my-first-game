@@ -365,9 +365,10 @@
       if (k === el.grid || !k.offsetHeight || getComputedStyle(k).position === 'absolute') return;
       avail -= k.offsetHeight + gap;
     });
-    var ggap = parseFloat(getComputedStyle(el.grid).rowGap) || 8;
+    var gcs = getComputedStyle(el.grid), ggap = parseFloat(gcs.rowGap) || 8;
+    avail -= (parseFloat(gcs.paddingTop) || 0) + (parseFloat(gcs.paddingBottom) || 0);
     if (lockRow) avail -= LOCK_H + ggap;
-    var colW = (el.grid.clientWidth - ggap * (B.COLS - 1)) / B.COLS;
+    var colW = (el.grid.clientWidth - (parseFloat(gcs.paddingLeft) || 0) - (parseFloat(gcs.paddingRight) || 0) - ggap * (B.COLS - 1)) / B.COLS;
     var h = Math.min(colW * 0.94, (avail - ggap * (rows - 1)) / rows);
     h = Math.max(rows > 5 ? 46 : 52, Math.floor(h));
     el.grid.style.gridAutoRows = h + 'px';
@@ -929,7 +930,7 @@
     if (state.tutorial < 3) { toast('Сначала закончи обучение'); return; }
     state.rush = { until: now + B.RUSH_MIN * MIN, readyAt: now + B.RUSH_COOLDOWN_H * HOUR };
     haptic('success'); toast('⚡ Аврал! Доход ×' + B.RUSH_MULT + ' на ' + B.RUSH_MIN + ' минут');
-    anim(el.rush, 'pop'); updateUi(true); save();
+    anim(el.rush, 'pop'); fx('rush', el.rush); updateUi(true); save();
   }
 
   // ---------- Офлайн-доход ----------
@@ -1291,7 +1292,7 @@
         });
       });
   });
-  // Пробные оформления (пока владелец выбирает): старое, A, B, C
+  // Пробные оформления (пока владелец выбирает): старое и A–J
   function themePicker() {
     var T = window.GameTheme; if (!T) return '';
     var cur = T.get();
