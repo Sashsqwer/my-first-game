@@ -213,7 +213,7 @@ window.__mockNet = {
       businesses: [{ type: 'barber', money: 5000, earned: 90000, room: 1, hires: 60, merges: 50, grid: [5, 4, 3, 3, 2, 1, 0, 0, 0, 0, 0, 0], upgrades: { boost: 3, chairs: 1, pr: 2 }, seen: 5 }] };
     const { ctx: c3, page: p3 } = await newPage(iphone, { init: `try { if (!sessionStorage.getItem('m')) { sessionStorage.setItem('m', 1); localStorage.setItem('${KEY}', ${JSON.stringify(JSON.stringify(v1))}); } } catch (e) {}` });
     const st = await p3.evaluate(() => { const s = window.__game.state; return { v: s.v, len: s.businesses[0].grid.length, g0: s.businesses[0].grid[0], needs: s.businesses[0].needs.length, ag: !!s.agency }; });
-    if (st.v !== 2 || st.len !== 16 || st.g0 !== 5 || st.needs !== 3 || !st.ag) problems.push('[logic] миграция v1 → v2: ' + JSON.stringify(st));
+    if (st.v !== 3 || st.len !== 16 || st.g0 !== 5 || st.needs !== 3 || !st.ag) problems.push('[logic] миграция v1 → v3: ' + JSON.stringify(st));
     await c3.close();
   }
 

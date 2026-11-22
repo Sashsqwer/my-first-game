@@ -386,7 +386,7 @@
     if (lockRow) avail -= LOCK_H + ggap;
     var colW = (el.grid.clientWidth - (parseFloat(gcs.paddingLeft) || 0) - (parseFloat(gcs.paddingRight) || 0) - ggap * (B.COLS - 1)) / B.COLS;
     var h = Math.min(colW * 1.12, (avail - ggap * (rows - 1)) / rows);
-    h = Math.max(rows > 5 ? 46 : 52, Math.floor(h));
+    h = Math.max(rows > 4 ? 40 : 44, Math.floor(h));
     el.grid.style.gridAutoRows = h + 'px';
     el.grid.style.gridTemplateRows = 'repeat(' + rows + ', ' + h + 'px)' + (lockRow ? ' ' + LOCK_H + 'px' : '');
     el.grid.classList.toggle('lockrow', lockRow);
