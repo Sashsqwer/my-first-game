@@ -9,16 +9,17 @@ const { chromium, devices } = require('playwright');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'docs', 'screens');
+const TOUT = path.join(OUT, 'themes');
 const URL = 'file://' + path.join(ROOT, 'app', 'index.html');
 const HAS_NET = fs.existsSync(path.join(ROOT, 'app', 'net.js'));
 const KEY = 'startup_zero_save_v1';
-fs.mkdirSync(OUT, { recursive: true });
+fs.mkdirSync(TOUT, { recursive: true });
 
 // Подставной сервер для проверки вкладок «Друзья» и «Рейтинг»
 const MOCK_NET = `Object.defineProperty(window, 'GameNet', { configurable: true, set() {}, get() { return window.__mockNet; } });
 window.__mockNet = {
   ready: () => true, user: () => ({ id: 1, name: 'Саша' }), invite: () => { window.__invited = (window.__invited || 0) + 1; },
-  friends: () => new Promise(r => setTimeout(() => r({ invited: 4, list: [
+  friends: () => new Promise(r => setTimeout(() => r({ invited: 4, counted: 3, list: [
     { name: 'Маша', business: 'coffee', level: 6, income: 820 }, { name: 'Дима', business: 'auto', level: 4, income: 95 },
     { name: 'Олег', business: 'gamedev', level: 3, income: 31 }, { name: 'Катя', business: 'fitness', level: 5, income: 240 }],
     rewards: [{ need: 1, title: '💰 Деньги на развитие', claimed: true, ready: false }, { need: 3, title: 'Редкий сотрудник', claimed: false, ready: true },
@@ -45,7 +46,7 @@ window.__mockNet = {
     page.on('pageerror', e => problems.push('[pageerror] ' + e.message));
     if (opts.init) await page.addInitScript(opts.init);
     if (opts.mock) await page.addInitScript(MOCK_NET);
-    await page.goto(URL);
+    await page.goto(URL + (opts.query || ''));
     await page.waitForTimeout(400);
     return { ctx, page };
   }
@@ -62,7 +63,7 @@ window.__mockNet = {
     if (w.worst) problems.push(`[layout] вылезает за экран на «${label}»: ${w.worst}`);
   }
   async function center(page, sel) {
-    const b = await page.locator(sel).boundingBox();
+    const b = await page.locator(sel).first().boundingBox();
     return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
   }
   async function dragCell(page, from, to) {
@@ -229,6 +230,8 @@ window.__mockNet = {
     await noHScroll(p4, 'друзья (сервер)');
     await p4.click('[data-claim-f="3"]'); await p4.waitForTimeout(2200);
     await p4.click('.modal [data-take]'); await p4.waitForTimeout(500);
+    const fs4 = await p4.evaluate(() => ({ f: window.__game.state.slots.friends, len: window.__game.state.businesses[0].grid.length }));
+    if (fs4.f !== 2 || fs4.len !== 14) problems.push('[logic] доп. места за 3 засчитанных друзей: ' + JSON.stringify(fs4));
     const claimed = await p4.evaluate(() => window.__game.state.net.claimed);
     if (!claimed.includes(3)) problems.push('[logic] награда за 3 друзей не записалась');
     await p4.click('.tab[data-view="rating"]'); await p4.waitForTimeout(300);
@@ -244,18 +247,148 @@ window.__mockNet = {
   }
 
   // 9. Узкий и широкий экраны: нет горизонтального скролла
-  for (const w of [320, 390, 430]) {
-    const { ctx: c2, page: p2 } = await newPage({ viewport: { width: w, height: w === 320 ? 568 : 760 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  for (const th of ['', 'a', 'b', 'c']) for (const w of [320, 390, 430]) {
+    const { ctx: c2, page: p2 } = await newPage({ viewport: { width: w, height: w === 320 ? 568 : 760 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, { query: '?theme=' + (th || 'old') });
+    const w0 = w; { const w = (th ? th + ' ' : '') + w0;
     await noHScroll(p2, `выбор ${w}px`);
     await p2.click('.biz[data-type="delivery"]'); await p2.waitForTimeout(250);
     await noHScroll(p2, `детали ${w}px`);
     await p2.click('.modal [data-start]'); await p2.waitForTimeout(300);
     await p2.evaluate(() => { const s = window.__game.state, b = s.businesses[0]; s.tutorial = 3; b.room = 2; b.grid = [1, 2, 13, 4, 25, 6, 37, 8, 1, 12, 3, 4, 5, 26, 7, 0, 0, 0, 0, 0]; b.seen = 8; b.money = 2.5e7; window.__game.rebuild(); });
     for (const v of ['upgrades', 'rating', 'friends', 'shop', 'office']) { await p2.click(`.tab[data-view="${v}"]`); await p2.waitForTimeout(120); await noHScroll(p2, `${v} ${w}px`); }
-    if (w === 320) await shot(p2, '20-narrow-320.png');
+    if (!th && w0 === 320) await shot(p2, '20-narrow-320.png');
+    if (th && w0 === 320) await p2.screenshot({ path: path.join(TOUT, th + '-9-narrow-320.jpg'), type: 'jpeg', quality: 82 });
     await p2.click('#btn-daily'); await p2.waitForTimeout(300); await noHScroll(p2, `календарь ${w}px`);
-    if (w === 320) await shot(p2, '21-narrow-320-calendar.png');
+    if (!th && w0 === 320) await shot(p2, '21-narrow-320-calendar.png');
     await c2.close();
+  } }
+
+  // 10. Доп. места: замки в сетке, друзья, серия 7 дней, окно «Больше мест»
+  {
+    const { ctx: c5, page: p5 } = await newPage(iphone);
+    await p5.click('.biz[data-type="it"]'); await p5.waitForTimeout(250);
+    await p5.click('.modal [data-start]'); await p5.waitForTimeout(300);
+    const st0 = await p5.evaluate(() => ({ len: window.__game.state.businesses[0].grid.length, locks: document.querySelectorAll('.cell.locked').length, row: document.querySelector('.grid').classList.contains('lockrow') }));
+    if (st0.len !== 12 || st0.locks !== 4 || !st0.row) problems.push('[logic] замки на старте: ' + JSON.stringify(st0));
+    await p5.evaluate(() => { window.__game.state.tutorial = 3; window.__game.applyFriendCount(1); });
+    await p5.waitForTimeout(200);
+    const st1 = await p5.evaluate(() => ({ len: window.__game.state.businesses[0].grid.length, locks: document.querySelectorAll('.cell.locked').length }));
+    if (st1.len !== 13 || st1.locks !== 3) problems.push('[logic] +1 место за 1 друга: ' + JSON.stringify(st1));
+    await p5.evaluate(() => window.__game.applyFriendCount(0)); // сервер недоступен — открытое не отнимаем
+    const st2 = await p5.evaluate(() => window.__game.state.businesses[0].grid.length);
+    if (st2 !== 13) problems.push('[logic] место за друга пропало: ' + st2);
+    // серия: вчера был 6-й день → сегодня 7-й → +1 место
+    await p5.evaluate(() => { const d = new Date(Date.now() - 864e5); window.__game.state.daily = { last: d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(), streak: 6 }; });
+    await p5.click('#btn-daily'); await p5.waitForTimeout(300);
+    await p5.click('.modal [data-claim]'); await p5.waitForTimeout(500);
+    const st3 = await p5.evaluate(() => ({ s: window.__game.state.slots.streak, len: window.__game.state.businesses[0].grid.length }));
+    if (!st3.s || st3.len !== 14) problems.push('[logic] +1 место за 7 дней: ' + JSON.stringify(st3));
+    await closeModals(p5);
+    await p5.click('.cell.locked >> nth=0'); await p5.waitForTimeout(300);
+    if (!(await p5.locator('.modal:not([hidden]) [data-star-slot]').count())) problems.push('[logic] окно «Больше мест» не открылось');
+    await shot(p5, '22-slots.png');
+    await noHScroll(p5, 'больше мест');
+    await p5.click('.modal [data-star-slot]'); await p5.waitForTimeout(200);
+    if ((await p5.evaluate(() => window.__game.state.slots.stars)) !== 0) problems.push('[logic] место за ⭐ открылось без оплаты');
+    await p5.click('.modal [data-go-friends]'); await p5.waitForTimeout(300);
+    if (!(await p5.locator('#view-friends.active').count())) problems.push('[logic] «Позвать» не перевёл в Друзья');
+    // перетаскивание на замок ничего не ломает
+    await p5.click('.tab[data-view="office"]'); await p5.waitForTimeout(200);
+    await p5.evaluate(() => { const b = window.__game.state.businesses[0]; b.grid = b.grid.map((v, i) => i === 0 ? 3 : 0); window.__game.rebuild(); });
+    const lockSel = '.cell.locked';
+    const a = await center(p5, '.cell[data-i="0"]'), lb = await center(p5, lockSel);
+    await p5.mouse.move(a.x, a.y); await p5.mouse.down(); await p5.mouse.move(a.x + 10, a.y + 6, { steps: 3 }); await p5.mouse.move(lb.x, lb.y, { steps: 8 }); await p5.mouse.up();
+    await p5.waitForTimeout(200);
+    const g5 = await p5.evaluate(() => window.__game.state.businesses[0].grid);
+    if (g5[0] !== 3 || g5.length !== 14) problems.push('[logic] перетаскивание на замок: ' + g5.join(','));
+    await c5.close();
+  }
+  // старое сохранение с серией ≥ 7 — место за серию даётся при миграции
+  {
+    const v2 = { v: 2, savedAt: Date.now() - 30e3, createdAt: Date.now() - 864e5, active: 0, tutorial: 3, daily: { last: null, streak: 9 },
+      businesses: [{ type: 'coffee', money: 500, earned: 900, room: 0, hires: 10, merges: 5, grid: [3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], upgrades: { boost: 0, chairs: 0, pr: 0 }, seen: 3, needs: [Date.now(), Date.now(), Date.now()], inbox: [] }] };
+    const { ctx: c6, page: p6 } = await newPage(iphone, { init: `try { if (!sessionStorage.getItem('m')) { sessionStorage.setItem('m', 1); localStorage.setItem('${KEY}', ${JSON.stringify(JSON.stringify(v2))}); } } catch (e) {}` });
+    const st = await p6.evaluate(() => ({ s: window.__game.state.slots, len: window.__game.state.businesses[0].grid.length }));
+    if (!st.s.streak || st.len !== 13) problems.push('[logic] миграция доп. мест: ' + JSON.stringify(st));
+    await c6.close();
+  }
+
+  // 11. Пробные темы A/B/C и текущая: скриншоты в docs/screens/themes/ + коллаж
+  const OFFICE = {
+    it: [25, 4, 13, 3, 12, 2, 2, 31, 1, 1, 0, 0],
+    coffee: [5, 14, 3, 23, 2, 2, 12, 1, 1, 34, 0, 0],
+    barber: [26, 5, 4, 14, 3, 3, 2, 22, 1, 1, 11, 0]
+  };
+  for (const th of ['old', 'a', 'b', 'c']) {
+    const { ctx: ct, page: pt } = await newPage(iphone, { query: '?theme=' + th });
+    const ts = name => pt.screenshot({ path: path.join(TOUT, th + '-' + name + '.jpg'), type: 'jpeg', quality: 82 });
+    await ts('1-choose');
+    await noHScroll(pt, th + ' выбор');
+    for (const [bz, grid] of Object.entries(OFFICE)) {
+      await pt.evaluate(([bz, grid]) => {
+        const B = window.BALANCE, s = window.__game.state, now = Date.now();
+        const b = B.newBusiness(bz, now, 0);
+        b.grid = grid.slice(); b.seen = 6; b.money = 12480; b.hires = 34; b.needs = [now - 4.8 * 3600e3, now - 1.5 * 3600e3, now - 1 * 3600e3];
+        s.businesses = [b]; s.active = 0; s.tutorial = 3; s.slots = { friends: 0, stars: 0, streak: false }; s.net.claimed = []; s.net.invited = 1;
+      }, [bz, grid]);
+      if (bz === 'it') await pt.evaluate(() => { window.__game.state.slots.friends = 1; });
+      await pt.evaluate(() => window.__game.setView('office'));
+      await pt.evaluate(() => window.__game.rebuild());
+      // экран выбора скрыт — показываем игру (как после входа)
+      await pt.evaluate(() => { document.getElementById('choose').hidden = true; document.getElementById('app').hidden = false; window.__game.rebuild(); });
+      await pt.waitForTimeout(500);
+      await ts('2-office-' + bz);
+      await noHScroll(pt, th + ' офис ' + bz);
+    }
+    // слияние: вспышка и частицы (снимок посреди эффекта)
+    {
+      const g = await pt.evaluate(() => window.__game.state.businesses[0].grid);
+      const i1 = g.indexOf(1), i2 = g.indexOf(1, i1 + 1);
+      if (i1 >= 0 && i2 >= 0) {
+        const a = await center(pt, `.cell[data-i="${i1}"]`), b = await center(pt, `.cell[data-i="${i2}"]`);
+        await pt.mouse.move(a.x, a.y); await pt.mouse.down(); await pt.mouse.move(a.x + 10, a.y + 6, { steps: 3 }); await pt.mouse.move(b.x, b.y, { steps: 6 }); await pt.mouse.up();
+        await pt.waitForTimeout(140);
+        await ts('3-merge');
+        await pt.waitForTimeout(900);
+        await closeModals(pt);
+      }
+    }
+    await pt.click('.cell.locked >> nth=0'); await pt.waitForTimeout(350);
+    await ts('4-slots');
+    await closeModals(pt);
+    await pt.click('.tab[data-view="shop"]'); await pt.waitForTimeout(400);
+    await ts('5-agency');
+    await noHScroll(pt, th + ' агентство');
+    await pt.evaluate(() => { window.__game.state.agency.freeAt = 0; window.__game.setView('shop'); });
+    await pt.click('[data-pack="free"]'); await pt.waitForTimeout(2300);
+    await ts('6-pack-open');
+    await pt.click('.modal [data-take]'); await pt.waitForTimeout(300);
+    await pt.click('.tab[data-view="office"]'); await pt.waitForTimeout(300);
+    await pt.evaluate(() => { const d = new Date(Date.now() - 864e5); window.__game.state.daily = { last: d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(), streak: 3 }; });
+    await pt.click('#btn-daily'); await pt.waitForTimeout(450);
+    await ts('7-calendar');
+    await noHScroll(pt, th + ' календарь');
+    await closeModals(pt, 3);
+    await pt.click('.tab[data-view="upgrades"]'); await pt.waitForTimeout(400);
+    await ts('8-upgrades');
+    await ct.close();
+  }
+  // коллаж для владельца: офис IT и кофейня в 4 темах
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1320, height: 1220 }, deviceScaleFactor: 1.25 });
+    const pg = await ctx.newPage();
+    const img = n => 'data:image/jpeg;base64,' + fs.readFileSync(path.join(TOUT, n + '.jpg')).toString('base64');
+    const cols = [['old', 'Сейчас'], ['a', 'A · Неоновая сцена'], ['b', 'B · Премиум-золото'], ['c', 'C · Кибер-комикс']];
+    const row = bz => cols.map(([t, n]) => `<figure><figcaption>${n}</figcaption><img src="${img(t + '-2-office-' + bz)}"></figure>`).join('');
+    await pg.setContent(`<html><body style="margin:0;background:#0b0c12;font:700 22px -apple-system,Segoe UI,Roboto,sans-serif;color:#fff">
+      <style>.r{display:grid;grid-template-columns:repeat(4,300px);gap:20px;padding:0 20px 18px}figure{margin:0}figcaption{padding:8px 2px;text-align:center}img{width:300px;border-radius:22px;display:block;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+      h1{font-size:26px;margin:0;padding:18px 20px 6px}h2{font-size:18px;color:#9aa3bb;margin:0;padding:4px 20px 0;font-weight:600}</style>
+      <h1>Стартап с нуля — 3 варианта оформления</h1><h2>💻 IT-стартап</h2><div class="r">${row('it')}</div><h2>☕ Кофейня</h2><div class="r">${row('coffee')}</div></body></html>`);
+    await pg.waitForTimeout(400);
+    const h = await pg.evaluate(() => document.body.scrollHeight);
+    await pg.setViewportSize({ width: 1320, height: h });
+    await pg.screenshot({ path: path.join(OUT, 'themes-compare.png') });
+    await ctx.close();
   }
 
   await browser.close();

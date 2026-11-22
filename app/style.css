@@ -520,3 +520,17 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
   .pack .buy { min-width: 80px; font-size: 12.5px; }
   .biz p { font-size: 11.5px; }
 }
+
+/* =================== 0.3: доп. места, общие мелочи =================== */
+.cell .pd, .cell .sh { display: none; }
+.bic { font-style: normal; }
+.btn .cost { font-weight: inherit; }
+.cell.locked { background: transparent; border: 1px dashed var(--line); color: var(--dim); cursor: pointer; padding: 2px 3px 0; }
+.cell.locked .lk-ico { font-size: min(18px, calc(var(--ch) * .3)); line-height: 1; opacity: .8; }
+.cell.locked .nm { color: var(--muted); font-weight: 600; font-size: min(10px, calc(var(--ch) * .14)); }
+.cell.locked:active { transform: scale(.95); }
+.slots-card { width: 100%; text-align: left; margin-bottom: 10px; }
+.slot-row.mark { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.seg.seg4 { grid-template-columns: repeat(4, 1fr); margin-bottom: 12px; }
+.grid.lockrow .cell.locked { flex-direction: row; gap: 4px; padding: 0 4px; --ch: 38px; }
+.grid.lockrow .cell.locked .nm { margin: 0; -webkit-line-clamp: 1; white-space: nowrap; text-overflow: ellipsis; display: block; }

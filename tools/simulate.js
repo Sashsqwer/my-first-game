@@ -6,6 +6,7 @@
    Новое в v2: редкость (×1.5/×2.5/×5, шанс повышения при слиянии), бесплатная пачка резюме сразу после
    обучения, календарь (день 1 — деньги), задания дня, аврал ×2 на 5 минут, потребности (падают со временем,
    игрок восстанавливает, когда можно и шкала ниже 90%).
+   --extra=N — сразу N дополнительных мест (за друзей, ⭐, серию в календаре), 0..6.
    Первый прогон печатается подробно, дальше — сводка по --runs прогонам с разными случайностями. */
 'use strict';
 const B = require('../app/balance.js');
@@ -15,6 +16,7 @@ const arg = (name, def) => { const a = process.argv.find(x => x.startsWith('--' 
 const TAP_RATE = arg('taps', 0.3);
 const SEED = arg('seed', 1);
 const RUNS = arg('runs', 30);
+const EXTRA = arg('extra', 0); // доп. места с самого старта (друзья, ⭐, серия): 0..6
 const NO_EXTRAS = process.argv.includes('--plain'); // без пачек, аврала, заданий — как в этапе 1
 
 function rng(seed) { // mulberry32
@@ -28,7 +30,7 @@ const gridStr = g => g.map(v => v ? B.lvl(v) + (B.rar(v) ? RN[B.rar(v)] : '') : 
 
 function run(seed, verbose) {
   const rnd = rng(seed);
-  const biz = B.newBusiness('it', 0);
+  const biz = B.newBusiness('it', 0, EXTRA);
   const log = [];
   const res = { firstMerge: null, lvl: {}, room2: null, room3: null, rares: 0 };
   let now = 0, rushUntil = 0, lastTapAt = -99;
@@ -81,7 +83,7 @@ function run(seed, verbose) {
     const next = B.ROOMS[biz.room + 1];
     if (next && B.maxLevel(biz) >= next.needLevel && biz.money >= next.needMoney) {
       biz.money = 0; biz.room++;
-      const g = new Array(B.COLS * next.rows).fill(0);
+      const g = new Array(B.cellCount(biz.room, EXTRA)).fill(0);
       biz.grid.forEach((v, i) => { g[i] = v; });
       biz.grid = g;
       res['room' + (biz.room + 1)] = t;
@@ -107,7 +109,7 @@ function run(seed, verbose) {
 }
 
 const first = run(SEED, true);
-console.log(`Симуляция ${minutes} мин, доля тапов ${TAP_RATE}${NO_EXTRAS ? ', БЕЗ пачек/аврала/заданий' : ''}, seed ${SEED}\n`);
+console.log(`Симуляция ${minutes} мин, доля тапов ${TAP_RATE}, доп. мест ${EXTRA}${NO_EXTRAS ? ', БЕЗ пачек/аврала/заданий' : ''}, seed ${SEED}\n`);
 console.log(first.log.join('\n'));
 console.log(`\nПервое слияние: ${first.firstMerge}с. Помещение в конце: ${first.biz.room + 1}.`);
 

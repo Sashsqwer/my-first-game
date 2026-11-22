@@ -79,7 +79,8 @@
       agency: { freeAt: 0, shards: 0 },
       quests: { day: null, list: [], chest: false },
       rush: { until: 0, readyAt: 0 },
-      net: { invited: 0, claimed: [], refBonus: false }
+      net: { invited: 0, counted: 0, claimed: [], refBonus: false },
+      slots: { friends: 0, stars: 0, streak: false }
     };
   }
   function valid(s) {
@@ -95,11 +96,18 @@
     s.rush = s.rush || { until: 0, readyAt: 0 };
     s.net = s.net || { invited: 0, claimed: [], refBonus: false };
     if (!Array.isArray(s.net.claimed)) s.net.claimed = [];
+    if (!isFinite(s.net.counted)) s.net.counted = 0;
+    // доп. места (с версии 0.3): старым сохранениям — по тому, что уже заработано
+    s.slots = s.slots || { friends: 0, stars: 0, streak: false };
+    s.slots.friends = Math.max(0, Math.min(B.SLOT_FRIENDS.length, Number(s.slots.friends) || 0), B.friendSlots(s.net.counted));
+    s.slots.stars = Math.max(0, Math.min(B.SLOT_STARS.length, Number(s.slots.stars) || 0));
+    s.slots.streak = !!s.slots.streak || (s.daily.streak || 0) >= B.SLOT_STREAK_DAYS;
+    var extra = B.extraSlots(s.slots);
     s.businesses = s.businesses.filter(function (b) { return b && BIZ[b.type]; });
     s.businesses.forEach(function (b) {
       b.upgrades = b.upgrades || { boost: 0, chairs: 0, pr: 0 };
       if (!(b.room >= 0 && b.room < B.ROOMS.length)) b.room = 0;
-      var need = B.COLS * B.ROOMS[b.room].rows;
+      var need = B.cellCount(b.room, extra);
       b.grid = (b.grid || []).map(function (v) { v = Number(v) || 0; return B.lvl(v) >= 1 && B.lvl(v) <= B.MAX_LEVEL && B.rar(v) <= 3 ? v : 0; });
       while (b.grid.length < need) b.grid.push(0);
       // v1: сохранение было в момент savedAt — шкалы считаем полными на тот момент
@@ -144,6 +152,17 @@
   function staff(lvl) { return def().staff[B.lvl(lvl) - 1]; }
   function rushOn(now) { return (now || Date.now()) < state.rush.until; }
   function income(now) { return B.incomePerSec(biz(), now || Date.now(), rushOn(now)); }
+  function extra() { return B.extraSlots(state.slots); }
+  // Эффекты темы (app/theme.js): в старой теме GameFx.on() = false и ничего не происходит
+  function fx(kind) {
+    var F = window.GameFx;
+    if (!F || typeof F[kind] !== 'function' || !F.on()) return;
+    try { F[kind].apply(F, [].slice.call(arguments, 1)); } catch (e) {}
+  }
+  function setBizAttr(type) {
+    if (type) document.documentElement.setAttribute('data-biz', type);
+    else document.documentElement.removeAttribute('data-biz');
+  }
 
   // ---------- DOM ----------
   function $(id) { return document.getElementById(id); }
@@ -188,11 +207,12 @@
   // ---------- Выбор бизнеса ----------
   function showChoose() {
     el.app.hidden = true; el.choose.hidden = false;
+    setBizAttr(null);
     var list = $('choose-list'); list.innerHTML = '';
     BIZ_ORDER.forEach(function (type) {
       var d = BIZ[type];
       var card = document.createElement('button');
-      card.className = 'biz'; card.dataset.type = type;
+      card.className = 'biz biz-' + type; card.dataset.type = type;
       card.innerHTML = '<div class="bi">' + d.icon + '</div><h3>' + esc(d.name) + '</h3><p>' + esc(d.desc) + '</p>' +
         '<div class="ladder">' + d.staff.map(function (s) { return s.e; }).join('') + '</div>';
       card.onclick = function () { chooseDetails(type); };
@@ -213,7 +233,7 @@
       });
   }
   function startBusiness(type) {
-    state.businesses = [B.newBusiness(type)];
+    state.businesses = [B.newBusiness(type, Date.now(), extra())];
     state.active = 0;
     state.tutorial = 0;
     save(true);
@@ -233,30 +253,125 @@
       el.grid.appendChild(c); cells.push(c);
     }
     renderCells();
+    // закрытые места: дополняют последний ряд (или показывают целый ряд), тап — как открыть
+    lockedSlots().forEach(function (L) {
+      var c = document.createElement('div');
+      c.className = 'cell locked lk-' + L.kind; c.dataset.lock = L.kind;
+      c.innerHTML = '<i class="pd"></i><span class="lk-ico">🔒</span><span class="nm">' + esc(L.label) + '</span>';
+      c.setAttribute('role', 'button');
+      c.setAttribute('aria-label', 'Закрытое место, откроется: ' + L.full);
+      el.grid.appendChild(c);
+    });
     fitGrid();
+  }
+  // Какие доп. места ещё закрыты и сколько из них показать в сетке
+  function lockedSlots() {
+    var sl = state.slots, list = [], firstFriend = [], rest = [];
+    for (var f = sl.friends; f < B.SLOT_FRIENDS.length; f++) {
+      var n = B.SLOT_FRIENDS[f];
+      (f === sl.friends ? firstFriend : rest).push({ kind: 'friend', label: '👥 ' + n, full: n + ' ' + plural(n, 'друг', 'друга', 'друзей') });
+    }
+    var stars = [];
+    for (var k = sl.stars; k < B.SLOT_STARS.length; k++) stars.push({ kind: 'star', label: '⭐ ' + B.SLOT_STARS[k], full: 'за ⭐ ' + B.SLOT_STARS[k] });
+    list = firstFriend.concat(stars.slice(0, 1), sl.streak ? [] : [{ kind: 'streak', label: '🗓️ ' + B.SLOT_STREAK_DAYS + ' дн', full: B.SLOT_STREAK_DAYS + ' дней подряд' }], rest, stars.slice(1));
+    var used = biz().grid.length % B.COLS, show = used ? B.COLS - used : B.COLS;
+    return list.slice(0, show);
+  }
+  function addSlotsToBusinesses() {
+    var ex = extra(), grew = false;
+    state.businesses.forEach(function (b) { var need = B.cellCount(b.room, ex); while (b.grid.length < need) { b.grid.push(0); grew = true; } });
+    return grew;
+  }
+  // Открыли новое место: добавляем клетку и красиво показываем
+  function slotsChanged(why) {
+    addSlotsToBusinesses();
+    if (!el.app.hidden && biz()) {
+      buildGrid(); updateUi(true);
+      var last = cells[cells.length - 1];
+      if (last) { anim(last, 'spawn'); fx('unlock', last); }
+    }
+    toast('🔓 +1 место в офисе — ' + why);
+    haptic('success'); save(true);
+  }
+  function applyFriendCount(counted) {
+    counted = Math.max(0, Number(counted) || 0);
+    state.net.counted = counted;
+    var want = B.friendSlots(counted);
+    if (want > state.slots.friends) {
+      var add = want - state.slots.friends;
+      state.slots.friends = want;
+      slotsChanged(add > 1 ? 'за друзей (+' + add + ')' : 'за друзей!');
+    }
+  }
+  function refreshFriendSlots() {
+    var N = net(); if (!N || !state) return;
+    try {
+      N.friends().then(function (d) {
+        if (!d || d.offline || !state) return;
+        applyFriendCount(typeof d.counted === 'number' ? d.counted : d.invited);
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  function showSlots(kind) {
+    var sl = state.slots, b = biz(), base = B.cellCount(b.room, 0), ex = extra(), cnt = state.net.counted || 0;
+    haptic('select');
+    var row = function (ico, title, desc, right, on, mark) {
+      return '<div class="card slot-row' + (on ? ' cur' : '') + (mark ? ' mark' : '') + '"><div class="ico">' + ico + '</div><div class="txt"><div class="t">' + title + '</div><div class="d">' + desc + '</div></div>' + right + '</div>';
+    };
+    var html = '<div class="big-ico">🔓</div><h2>Больше мест в офисе</h2><p>Сейчас ' + (base + ex) + ' ' + plural(base + ex, 'место', 'места', 'мест') + ': ' + base + ' в помещении + ' + ex + ' доп. из ' + B.SLOT_MAX + '. Доп. места — во всех бизнесах и после переезда.</p><div class="list left">';
+    B.SLOT_FRIENDS.forEach(function (n, i) {
+      var on = i < sl.friends;
+      html += row('👥', '+1 место за ' + n + ' ' + plural(n, 'друга', 'друзей', 'друзей'), on ? 'Открыто ✅' : 'Засчитано друзей: ' + Math.min(cnt, n) + ' из ' + n,
+        on ? '<button class="buy max">✓</button>' : '<button class="buy" data-go-friends>Позвать</button>', on, kind === 'friend' && i === sl.friends);
+    });
+    B.SLOT_STARS.forEach(function (p, i) {
+      var on = i < sl.stars;
+      html += row('⭐', '+1 место за ⭐ ' + p, on ? 'Открыто ✅' : 'Оплата Telegram Stars — скоро',
+        on ? '<button class="buy max">✓</button>' : '<button class="buy soon-btn" data-star-slot>скоро — за ⭐ ' + p + '</button>', on, kind === 'star' && i === sl.stars);
+    });
+    var ds = dailyState(), have = ds.claimed ? ds.streak : Math.max(0, ds.streak - 1);
+    html += row('🗓️', '+1 место за ' + B.SLOT_STREAK_DAYS + ' дней подряд', sl.streak ? 'Достижение получено ✅' : 'Календарь наград: ' + Math.min(have, B.SLOT_STREAK_DAYS) + ' из ' + B.SLOT_STREAK_DAYS + ' дней',
+      sl.streak ? '<button class="buy max">✓</button>' : '<button class="buy" data-go-daily>Календарь</button>', sl.streak, kind === 'streak');
+    html += '</div><div class="btns" style="margin-top:14px"><button class="btn btn-dark" data-close>Закрыть</button></div>';
+    modal(html, function (root, close) {
+      root.querySelector('[data-close]').onclick = close;
+      root.querySelectorAll('[data-go-friends]').forEach(function (x) { x.onclick = function () { close(); setView('friends'); }; });
+      root.querySelectorAll('[data-star-slot]').forEach(function (x) { x.onclick = function () { toast('⭐ Оплата Telegram Stars появится скоро'); haptic('select'); }; });
+      var gd = root.querySelector('[data-go-daily]'); if (gd) gd.onclick = function () { close(); showDaily(); };
+    });
   }
   // Высота клеток подстраивается под экран: сетка влезает без прокрутки, пока клетка не меньше 52px
   function fitGrid() {
     if (el.app.hidden || !cells.length) return;
     var rows = Math.ceil(cells.length / B.COLS);
+    // закрытые места целым отдельным рядом — ряд низкий, чтобы не съедать место у сотрудников
+    var lockRow = el.grid.children.length > rows * B.COLS, LOCK_H = 34;
     var cs = getComputedStyle(el.board);
     var gap = parseFloat(cs.rowGap) || 10;
-    var avail = el.board.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - el.needs.offsetHeight - el.nextRoom.offsetHeight - gap * 2;
-    var colW = (el.grid.clientWidth - 8 * (B.COLS - 1)) / B.COLS;
-    var h = Math.min(colW * 0.94, (avail - 8 * (rows - 1)) / rows);
-    h = Math.max(52, Math.floor(h));
+    var avail = el.board.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    [].forEach.call(el.board.children, function (k) {
+      if (k === el.grid || !k.offsetHeight || getComputedStyle(k).position === 'absolute') return;
+      avail -= k.offsetHeight + gap;
+    });
+    var ggap = parseFloat(getComputedStyle(el.grid).rowGap) || 8;
+    if (lockRow) avail -= LOCK_H + ggap;
+    var colW = (el.grid.clientWidth - ggap * (B.COLS - 1)) / B.COLS;
+    var h = Math.min(colW * 0.94, (avail - ggap * (rows - 1)) / rows);
+    h = Math.max(rows > 5 ? 46 : 52, Math.floor(h));
     el.grid.style.gridAutoRows = h + 'px';
+    el.grid.style.gridTemplateRows = 'repeat(' + rows + ', ' + h + 'px)' + (lockRow ? ' ' + LOCK_H + 'px' : '');
+    el.grid.classList.toggle('lockrow', lockRow);
     el.grid.style.setProperty('--ch', h + 'px');
   }
   function cellHtml(v) {
     var s = staff(v);
-    return '<span class="lv">' + B.lvl(v) + '</span>' + rarTag(v) + '<span class="em">' + s.e + '</span><span class="nm">' + esc(s.s) + '</span>';
+    return '<i class="pd"></i>' + (B.rar(v) ? '<i class="sh"></i>' : '') + '<span class="lv">' + B.lvl(v) + '</span>' + rarTag(v) + '<span class="em">' + s.e + '</span><span class="nm">' + esc(s.s) + '</span>';
   }
   function renderCell(i) {
     var v = biz().grid[i], c = cells[i];
     if (!c) return;
-    c.className = 'cell' + (v ? rarCls(v) : ' empty');
-    c.innerHTML = v ? cellHtml(v) : '';
+    c.className = 'cell' + (v ? rarCls(v) + ' lvl-' + B.lvl(v) : ' empty');
+    c.innerHTML = v ? cellHtml(v) : '<i class="pd"></i>';
     c.setAttribute('aria-label', v ? empName(v) + ', уровень ' + B.lvl(v) : 'Пустая клетка');
   }
   function renderCells() {
@@ -325,7 +440,7 @@
     if (i < 0) { toast('Нет свободного места — объедини одинаковых'); haptic('error'); return; }
     if (b.money < cost) { toast('Не хватает ' + rub(cost - b.money)); haptic('error'); return; }
     b.money -= cost; b.hires++; b.grid[i] = 1;
-    renderCell(i); markPairs(); anim(cells[i], 'spawn');
+    renderCell(i); markPairs(); anim(cells[i], 'spawn'); fx('spawn', cells[i]);
     haptic('light');
     questProgress('hire');
     if (state.tutorial < 2) { state.tutorial++; tutorial(); }
@@ -343,6 +458,7 @@
     var gain = B.cellIncome(v) * B.incomeMult(b) * B.TAP_SECONDS * (rushOn(now) ? B.RUSH_MULT : 1);
     b.money += gain; b.earned += gain;
     floatAt(c, '+' + fmtRate(gain));
+    fx('tap', c, el.money);
     var bar = document.createElement('i'); bar.className = 'cd';
     c.appendChild(bar);
     setTimeout(function () { bar.remove(); }, B.TAP_COOLDOWN * 1000);
@@ -353,7 +469,7 @@
 
   function drop(from, to) {
     var b = biz(), g = b.grid;
-    if (from === to || to == null) return;
+    if (from === to || to == null || to >= g.length) return;
     var a = g[from], t = g[to];
     if (!t) {
       g[to] = a; g[from] = 0; delete tapCd[from];
@@ -364,6 +480,7 @@
       delete tapCd[from];
       renderCell(from); renderCell(to);
       anim(cells[to], 'pop');
+      fx('merge', cells[to], B.rar(res.v), res.up);
       floatAt(cells[to], res.up ? '✨ ' + RARITY[B.rar(res.v)].n + '!' : '+1 уровень', res.up ? 'lvl up r' + B.rar(res.v) : 'lvl');
       haptic('success');
       questProgress('merge');
@@ -396,7 +513,7 @@
   function cellIndexAt(x, y) {
     var t = document.elementFromPoint(x, y);
     var c = t && t.closest ? t.closest('.cell') : null;
-    return c && c.parentNode === el.grid ? Number(c.dataset.i) : null;
+    return c && c.parentNode === el.grid && c.dataset.i != null ? Number(c.dataset.i) : null;
   }
   el.grid.addEventListener('pointerdown', function (e) {
     if (drag || (e.button && e.button !== 0)) return;
@@ -451,6 +568,10 @@
   }
   el.grid.addEventListener('pointerup', function (e) { endDrag(e, false); });
   el.grid.addEventListener('pointercancel', function (e) { endDrag(e, true); });
+  el.grid.addEventListener('click', function (e) {
+    var c = e.target.closest('.cell.locked');
+    if (c) showSlots(c.dataset.lock);
+  });
   el.grid.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
   // ---------- Забота о сотрудниках ----------
@@ -500,7 +621,7 @@
       var R = B.ROOMS[i];
       html += '<div class="card ' + (i === b.room ? 'cur' : i > b.room + 1 ? 'locked' : '') + '"><div class="ico">' + r.e + '</div><div class="txt">' +
         '<div class="t">' + esc(r.n) + ' <small>×' + R.mult + '</small></div>' +
-        '<div class="d">' + (B.COLS * R.rows) + ' мест (' + B.COLS + '×' + R.rows + ')' + (i === b.room ? ' · ты здесь' : i < b.room ? ' · пройдено' : '') + '</div>' +
+        '<div class="d">' + B.cellCount(i, extra()) + ' мест (' + B.COLS + '×' + R.rows + (extra() ? ' + ' + extra() : '') + ')' + (i === b.room ? ' · ты здесь' : i < b.room ? ' · пройдено' : '') + '</div>' +
         (i > b.room ? roomReqHtml(i) : '') + '</div>' +
         (i === b.room + 1 ? '<button class="buy ' + (roomStatus(i).ok ? '' : 'poor') + '" data-move="' + i + '">Переехать</button>' : '') +
         '</div>';
@@ -519,11 +640,11 @@
   function moveRoom(idx) {
     var b = biz(), R = B.ROOMS[idx], r = def().rooms[idx];
     b.money = 0; b.room = idx;
-    while (b.grid.length < B.COLS * R.rows) b.grid.push(0);
+    while (b.grid.length < B.cellCount(idx, extra())) b.grid.push(0);
     tapCd = {};
     buildGrid(); updateUi(true); save(true);
     haptic('success');
-    modal('<div class="big-ico">' + r.e + '</div><h2>Переезд: ' + esc(r.n) + '!</h2><p>Теперь ' + (B.COLS * R.rows) + ' мест и доход ×' + R.mult + '. Команда уже раскладывает вещи.</p>' +
+    modal('<div class="big-ico">' + r.e + '</div><h2>Переезд: ' + esc(r.n) + '!</h2><p>Теперь ' + B.cellCount(idx, extra()) + ' мест и доход ×' + R.mult + '. Команда уже раскладывает вещи.</p>' +
       '<div class="btns"><button class="btn btn-primary">Работаем!</button></div>', function (root, close) { root.querySelector('button').onclick = close; });
   }
 
@@ -548,7 +669,7 @@
     rl.innerHTML = d.rooms.map(function (r, i) {
       var R = B.ROOMS[i];
       return '<div class="card ' + (i === b.room ? 'cur' : '') + '"><div class="ico">' + r.e + '</div><div class="txt"><div class="t">' + esc(r.n) + ' <small>×' + R.mult + '</small></div>' +
-        '<div class="d">' + (B.COLS * R.rows) + ' мест' + (i === b.room ? ' · ты здесь' : i < b.room ? ' · пройдено' : '') + '</div>' + (i > b.room ? roomReqHtml(i) : '') + '</div>' +
+        '<div class="d">' + B.cellCount(i, extra()) + ' мест' + (i === b.room ? ' · ты здесь' : i < b.room ? ' · пройдено' : '') + '</div>' + (i > b.room ? roomReqHtml(i) : '') + '</div>' +
         (i === b.room + 1 ? '<button class="buy ' + (roomStatus(i).ok ? '' : 'poor') + '" data-rooms>Переезд</button>' : '') + '</div>';
     }).join('');
     $('team').innerHTML = d.staff.map(function (s, i) {
@@ -701,7 +822,7 @@
     }
     var html = '<div class="big-ico">🗓️</div><h2>Календарь наград</h2>' +
       '<p>Заходи каждый день подряд — на 7-й день пачка «Премиум», дальше по кругу. Пропустишь день — начнёшь сначала.</p>' +
-      '<div class="streak">' + row + '</div>' + (week > 1 ? '<p class="small-l">Серия: ' + ds.streak + ' ' + plural(ds.streak, 'день', 'дня', 'дней') + ' подряд · неделя ' + week + '</p>' : '');
+      '<div class="streak">' + row + '</div>' + (!state.slots.streak ? '<p class="small-l">🔓 ' + B.SLOT_STREAK_DAYS + ' дней подряд — +1 место в офисе навсегда</p>' : '') + (week > 1 ? '<p class="small-l">Серия: ' + ds.streak + ' ' + plural(ds.streak, 'день', 'дня', 'дней') + ' подряд · неделя ' + week + '</p>' : '');
     if (ds.claimed) {
       var nx = calInfo(calDay(ds.streak + 1));
       html += '<p>Сегодня уже забрал ✅<br>Завтра: ' + nx.big + '</p><div class="btns"><button class="btn btn-dark" data-close>Ок</button></div>';
@@ -721,6 +842,7 @@
         close();
         giveCalendar(B.CALENDAR[calDay(d2.streak)]);
         haptic('success'); updateUi(true); save(true);
+        if (d2.streak >= B.SLOT_STREAK_DAYS && !state.slots.streak) { state.slots.streak = true; slotsChanged('за ' + B.SLOT_STREAK_DAYS + ' дней подряд!'); }
       };
     });
   }
@@ -891,7 +1013,8 @@
   var friendsReq = 0;
   function renderFriends() {
     var box = $('friends-box'), N = net();
-    var head = '<div class="hero-card"><div class="hc-ico">🤝</div><div><b>Зови друзей — получай сотрудников</b><p>Другу — подарок на старте, тебе — награды по ступеням. За 3 друзей — бесплатный редкий сотрудник.</p></div></div>';
+    var head = '<div class="hero-card"><div class="hc-ico">🤝</div><div><b>Зови друзей — получай сотрудников</b><p>Другу — подарок на старте, тебе — награды по ступеням. За 3 друзей — бесплатный редкий сотрудник.</p></div></div>' +
+      '<button class="card slots-card" data-slots><div class="ico">🔓</div><div class="txt"><div class="t">+1 место в офисе за 1, 3 и 10 друзей</div><div class="d">Открыто за друзей: ' + state.slots.friends + ' из ' + B.SLOT_FRIENDS.length + ' · ещё места — за ⭐ и 7 дней подряд</div></div></button>';
     if (!N) {
       var steps = C.FRIEND_STEPS.map(function (s) { return { need: s.need, title: s.title, claimed: false, ready: false }; });
       box.innerHTML = head + '<div class="card col"><div class="t">Приглашено: <span class="acc">0</span></div>' + ladderHtml(0, steps, false) + '</div>' +
@@ -907,6 +1030,7 @@
       if (data.offline) throw new Error('offline');
       var invited = data.invited || 0, rewards = (data.rewards && data.rewards.length ? data.rewards : C.FRIEND_STEPS.map(function (s) { return { need: s.need, title: s.title }; }));
       state.net.invited = invited;
+      applyFriendCount(typeof data.counted === 'number' ? data.counted : invited);
       rewards.forEach(function (r) { if (r.claimed && state.net.claimed.indexOf(r.need) < 0) state.net.claimed.push(r.need); });
       var list = (data.list || []).map(function (f) {
         var d = BIZ[f.business];
@@ -925,6 +1049,7 @@
   }
   $('view-friends').addEventListener('click', function (e) {
     if (e.target.closest('[data-invite]')) return invite();
+    if (e.target.closest('[data-slots]')) return showSlots('friend');
     if (e.target.closest('[data-retry]')) return renderFriends();
     var c = e.target.closest('[data-claim-f]'), N = net();
     if (c && N) {
@@ -998,6 +1123,7 @@
     if (!state || el.app.hidden) return;
     if (activeView === 'friends') renderFriends();
     if (activeView === 'rating') renderRating();
+    if (activeView !== 'friends') refreshFriendSlots();
     sync();
   });
   function hookReferral() {
@@ -1037,14 +1163,14 @@
     if (bs !== lastBtnState || force) {
       lastBtnState = bs;
       el.hire.className = 'btn btn-primary' + (full ? ' full' : !inbox && b.money < cost ? ' poor' : '') + (state.tutorial < 2 ? ' glow' : '');
-      el.hire.textContent = full ? '➕ Нет места' : inbox ? '🪑 Из приёмной · ' + inbox : '➕ Нанять · ' + rub(cost);
+      el.hire.innerHTML = full ? '<i class="bic bic-full">➕</i> Нет места' : inbox ? '<i class="bic bic-inbox">🪑</i> Из приёмной · ' + inbox : '<i class="bic bic-hire">➕</i> Нанять · <b class="cost">' + rub(cost) + '</b>';
     }
     // аврал
     var rs = state.rush, rlabel, rcls = 'btn btn-dark btn-rush';
     if (now < rs.until) { rlabel = '⚡ ' + fmtClock((rs.until - now) / 1000); rcls += ' on'; }
     else if (now < rs.readyAt) { var left = (rs.readyAt - now) / 1000; rlabel = '⚡ ' + (left >= 3600 ? Math.ceil(left / 3600) + ' ч' : Math.ceil(left / 60) + ' мин'); rcls += ' wait'; }
     else { rlabel = '⚡ Аврал ×' + B.RUSH_MULT; if (state.tutorial >= 3) rcls += ' ready'; }
-    if (el.rush.textContent !== rlabel) el.rush.textContent = rlabel;
+    if (el.rush.textContent !== rlabel) el.rush.innerHTML = '<i class="bic bic-rush">⚡</i> ' + esc(rlabel.replace(/^⚡ /, ''));
     if (el.rush.className.replace(' pop', '') !== rcls) el.rush.className = rcls;
     updateDots();
     // баннер «Пригласи 3»
@@ -1128,13 +1254,29 @@
     var b = biz(), d = def();
     modal('<div class="big-ico">⚙️</div><h2>Настройки</h2>' +
       '<p>' + d.icon + ' ' + d.name + ' · ' + d.rooms[b.room].n + '<br>Наймов: ' + b.hires + ' · объединений: ' + b.merges + '<br>Сохранение: на этом устройстве' + (cloud ? ' и в облаке Telegram' : '') + (net() ? '<br>Сервер: подключён ✅' : '') + '</p>' +
+      themePicker() +
       '<div class="btns"><button class="btn btn-dark" data-close>Закрыть</button><button class="btn btn-ghost" data-reset>Сбросить прогресс</button></div>' +
-      '<p style="margin:12px 0 0;font-size:12px;color:var(--dim)">Стартап с нуля · версия 0.2 (этап 2)</p>',
+      '<p style="margin:12px 0 0;font-size:12px;color:var(--dim)">Стартап с нуля · версия 0.3</p>',
       function (root, close) {
         root.querySelector('[data-close]').onclick = close;
         root.querySelector('[data-reset]').onclick = function () { close(); confirmReset(); };
+        root.querySelectorAll('[data-theme-set]').forEach(function (x) {
+          x.onclick = function () {
+            var T = window.GameTheme; if (!T) return;
+            T.set(x.dataset.themeSet); haptic('select'); close();
+            requestAnimationFrame(function () { fitGrid(); updateUi(true); });
+          };
+        });
       });
   });
+  // Пробные оформления (пока владелец выбирает): старое, A, B, C
+  function themePicker() {
+    var T = window.GameTheme; if (!T) return '';
+    var cur = T.get();
+    return '<p class="small-l" style="margin-bottom:6px">Оформление (пробное)</p><div class="seg seg4 theme-pick">' + T.list.map(function (t) {
+      return '<button class="' + (cur === t.id ? 'on' : '') + '" data-theme-set="' + t.id + '">' + t.n + '</button>';
+    }).join('') + '</div>';
+  }
   function confirmReset() {
     modal('<div class="big-ico">⚠️</div><h2>Сбросить прогресс?</h2><p>Пропадут деньги, сотрудники, помещения, улучшения и осколки. Это нельзя отменить.</p>' +
       '<div class="btns"><button class="btn btn-danger" data-yes>Да, начать заново</button><button class="btn btn-dark" data-no>Отмена</button></div>',
@@ -1154,7 +1296,17 @@
   }
 
   // ---------- Игровой цикл ----------
-  var lastTick = Date.now(), lastUi = 0, lastSave = Date.now();
+  var lastTick = Date.now(), lastUi = 0, lastSave = Date.now(), lastPop = 0;
+  // «+доход» вылетает из случайного сотрудника (только в новых темах)
+  function incomePop() {
+    if (!window.GameFx || !window.GameFx.on() || drag) return;
+    var g = biz().grid, idx = [];
+    for (var i = 0; i < g.length; i++) if (g[i]) idx.push(i);
+    if (!idx.length) return;
+    var k = idx[Math.floor(Math.random() * idx.length)];
+    var gain = B.cellIncome(g[k]) * B.incomeMult(biz()) * B.needsFactor(biz(), Date.now()) * (rushOn() ? B.RUSH_MULT : 1) * 2.6;
+    fx('income', cells[k], '+' + fmtRate(gain));
+  }
   function frame() { tick(); requestAnimationFrame(frame); }
   function tick() {
     var now = Date.now();
@@ -1170,6 +1322,7 @@
         biz().money += g; biz().earned += g;
       }
       if (now - lastUi > 100) { lastUi = now; updateUi(); }
+      if (now - lastPop > 2600 && activeView === 'office' && !modalOpen) { lastPop = now; incomePop(); }
       if (now - lastSave > 5000) { lastSave = now; save(); }
       if (now - lastSync > 60000) sync();
     }
@@ -1189,6 +1342,7 @@
 
   function showGame() {
     el.choose.hidden = true; el.app.hidden = false;
+    setBizAttr(biz().type);
     setView('office');
     updateUi(true);
     buildGrid();
@@ -1206,6 +1360,7 @@
       if (away >= B.OFFLINE_MIN_SEC) offline(away, state.savedAt);
     }
     hookReferral();
+    setTimeout(refreshFriendSlots, 1500); // друзья → доп. места (если сервер уже на связи)
     lastSync = Date.now() - 50000; // первая отправка — через ~10 сек после входа
     requestAnimationFrame(frame);
   }
@@ -1221,7 +1376,8 @@
   // для отладки и тестов
   window.__game = {
     get state() { return state; }, save: save, fmt: fmt,
-    rebuild: function () { buildGrid(); updateUi(true); tutorial(); },
-    reveal: reveal, openPack: openPack, setView: setView
+    rebuild: function () { addSlotsToBusinesses(); setBizAttr(biz().type); buildGrid(); updateUi(true); tutorial(); },
+    reveal: reveal, openPack: openPack, setView: setView, showSlots: showSlots, showDaily: showDaily,
+    applyFriendCount: applyFriendCount
   };
 })();
