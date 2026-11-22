@@ -9,23 +9,31 @@
   var B = {
     START_MONEY: 110,         // деньги на старте — хватает на 2 найма (обучение)
     HIRE_BASE: 50,            // цена первого найма
-    HIRE_GROWTH: 1.07,        // ×1.07 за каждый найм
-    INCOME_BASE: 1,           // ₽/сек у сотрудника 1 уровня
+    HIRE_GROWTH: 1.17,        // ×1.17 за каждый найм
+    INCOME_BASE: 0.05,        // ₽/сек у сотрудника 1 уровня (= 180 ₽/час)
     INCOME_GROWTH: 2.2,       // ×2.2 за уровень
     MAX_LEVEL: 8,
     COLS: 4,
-    TAP_SECONDS: 2,           // тап = 2 секунды дохода сотрудника
-    TAP_COOLDOWN: 3,          // кулдаун тапа, сек
+    TAP_SECONDS: 10,          // тап = 10 секунд дохода сотрудника
+    TAP_COOLDOWN: 5,          // кулдаун тапа, сек
     OFFLINE_MIN_SEC: 60,      // меньше минуты — окно не показываем
     OFFLINE_CAP_HOURS: [8, 12, 24], // по уровню «Удобных кресел»
     HOLDING_UNLOCK_LEVEL: 5,  // задел под вариант 05: 2-й бизнес на 5-м уровне сотрудника
 
-    // Помещения (общие числа для всех бизнесов, названия — в game.js)
+    // Ступени офиса (общие числа для всех бизнесов, названия — в content.js).
+    // mult — множитель дохода (итоговый, не накопительный), rows — рядов по 4 места; переезд — нужен сотрудник уровня needLevel и needMoney ₽ (деньги сгорают)
     ROOMS: [
-      { rows: 3, mult: 1,  needLevel: 0, needMoney: 0 },
-      { rows: 4, mult: 3,  needLevel: 5, needMoney: 30000 },
-      { rows: 5, mult: 10, needLevel: 7, needMoney: 1800000 }
+      { rows: 3, mult: 1,   needLevel: 0, needMoney: 0 },
+      { rows: 3, mult: 1.4, needLevel: 5, needMoney: 200000 },
+      { rows: 4, mult: 1.9, needLevel: 5, needMoney: 800000 },
+      { rows: 4, mult: 2.6, needLevel: 6, needMoney: 2000000 },
+      { rows: 4, mult: 3.5, needLevel: 6, needMoney: 6000000 },
+      { rows: 5, mult: 4.8, needLevel: 7, needMoney: 18000000 },
+      { rows: 5, mult: 6.5, needLevel: 7, needMoney: 50000000 },
+      { rows: 5, mult: 9,   needLevel: 8, needMoney: 150000000 }
     ],
+    // Старые сохранения (до 8 ступеней): помещение 0/1/2 (×1 4×3, ×3 4×4, ×10 4×5) → ближайшая новая ступень
+    ROOM_FROM_V2: [0, 3, 7],
 
     // Дополнительные места в помещении (сверх 4×N): общие для всех бизнесов игрока
     SLOT_FRIENDS: [1, 3, 10],  // +1 место за 1, за 3 и за 10 засчитанных друзей (до +3)
@@ -35,14 +43,14 @@
 
     // Улучшения
     UPGRADES: {
-      boost:  { base: 150,  growth: 2.2, max: 25 },  // +10% дохода за уровень
-      chairs: { base: 2000, growth: 12,  max: 2 },   // офлайн 8 → 12 → 24 ч
-      pr:     { base: 300,  growth: 2.6, max: 10 }   // найм −5% за уровень
+      boost:  { base: 2000,  growth: 2.0, max: 25 },  // +10% дохода за уровень
+      chairs: { base: 25000, growth: 16,  max: 2 },   // офлайн 8 → 12 → 24 ч
+      pr:     { base: 1500,  growth: 2.6, max: 10 }   // найм −5% за уровень
     },
 
     // ---------- Редкость ----------
     // 0 обычный, 1 редкий, 2 эпический, 3 легендарный
-    RARITY_MULT: [1, 1.5, 2.5, 5],
+    RARITY_MULT: [1, 1.5, 2, 5],
     // Слияние двух ОДИНАКОВЫХ по редкости: шанс, что результат станет на ступень выше.
     // Разные редкости → результат = лучшая из двух (без шанса).
     MERGE_UP_CHANCE: [0.03, 0.10, 0.05, 0],
@@ -72,18 +80,18 @@
     // ---------- Календарь наград (7 дней, дальше по кругу) ----------
     // money — минуты дохода (но не меньше min ₽), shards — осколки, pack — пачка
     CALENDAR: [
-      { type: 'money', minutes: 2, min: 100 },
+      { type: 'money', minutes: 60, min: 100 },
       { type: 'shards', n: 1 },
-      { type: 'money', minutes: 5, min: 300 },
+      { type: 'money', minutes: 120, min: 300 },
       { type: 'pack', pack: 'standard' },
       { type: 'shards', n: 2 },
-      { type: 'money', minutes: 10, min: 800 },
+      { type: 'money', minutes: 240, min: 800 },
       { type: 'pack', pack: 'premium' }
     ],
 
     // ---------- Задания дня ----------
     QUEST_COUNT: 3,
-    QUEST_REWARD_MIN: 2,      // каждое задание — 2 минуты дохода (не меньше 150 ₽)
+    QUEST_REWARD_MIN: 30,     // каждое задание — 30 минут дохода (не меньше 150 ₽)
     QUEST_REWARD_FLOOR: 150,
     QUESTS: [
       { id: 'merge', need: 25 },

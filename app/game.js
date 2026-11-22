@@ -5,7 +5,7 @@
   var BIZ = C.BIZ, BIZ_ORDER = C.ORDER, RARITY = C.RARITY;
   var SAVE_KEY = 'startup_zero_save_v1'; // имя ключа оставили прежним, версия — внутри (v)
   var CLOUD_KEY = 'save_v1';
-  var VERSION = 2;
+  var VERSION = 3; // 3 — 8 ступеней офиса и доход в ₽/час (сохранения v1/v2 переводятся в normalize)
   var HOUR = 3600000, MIN = 60000;
 
   // ---------- Telegram ----------
@@ -54,6 +54,15 @@
     if (n < 100 && n % 1 !== 0) return (Math.round(n * 10) / 10).toFixed(1).replace(/\.0$/, '').replace('.', ',');
     return fmt(n);
   }
+  // Доход показываем в ₽/час: 360 ₽/час, 1,2 тыс. ₽/час, 3,4 млн ₽/час (внутри игра считает посекундно)
+  function fmtK(n) {
+    if (!isFinite(n) || n < 0) n = 0;
+    if (n < 1000) return String(n < 10 && n % 1 ? (Math.round(n * 10) / 10).toString().replace('.', ',') : Math.round(n));
+    if (n < 1e6) { var k = n / 1000; return (k < 100 ? (Math.floor(k * 10) / 10).toFixed(1).replace(/\.0$/, '').replace('.', ',') : String(Math.floor(k))) + '\u00A0тыс.'; }
+    return fmt(n);
+  }
+  function perHour(perSec) { return fmtK(perSec * 3600) + '\u00A0₽/час'; }
+  function mult(x) { return '×' + String(Math.round(x * 100) / 100).replace('.', ','); }
   function rub(n) { return fmt(n) + '\u00A0₽'; }
   function plural(n, a, b, c) {
     n = Math.abs(n) % 100; var m = n % 10;
@@ -84,7 +93,7 @@
     };
   }
   function valid(s) {
-    return s && (s.v === 1 || s.v === VERSION) && Array.isArray(s.businesses) && typeof s.savedAt === 'number';
+    return s && (s.v === 1 || s.v === 2 || s.v === VERSION) && Array.isArray(s.businesses) && typeof s.savedAt === 'number';
   }
   // Миграция и починка: старые сохранения (v1) — без редкости, потребностей, агентства
   function normalize(s) {
@@ -104,7 +113,10 @@
     s.slots.streak = !!s.slots.streak || (s.daily.streak || 0) >= B.SLOT_STREAK_DAYS;
     var extra = B.extraSlots(s.slots);
     s.businesses = s.businesses.filter(function (b) { return b && BIZ[b.type]; });
+    var oldRooms = !(s.v >= 3);
     s.businesses.forEach(function (b) {
+      // до версии 3 было 3 помещения (×1, ×3 4×4, ×10 4×5) — переводим в ближайшую из 8 ступеней
+      if (oldRooms) b.room = B.ROOM_FROM_V2[b.room] || 0;
       b.upgrades = b.upgrades || { boost: 0, chairs: 0, pr: 0 };
       if (!(b.room >= 0 && b.room < B.ROOMS.length)) b.room = 0;
       var need = B.cellCount(b.room, extra);
@@ -471,7 +483,7 @@
     tapCd[i] = now + B.TAP_COOLDOWN * 1000;
     var gain = B.cellIncome(v) * B.incomeMult(b) * B.TAP_SECONDS * (rushOn(now) ? B.RUSH_MULT : 1);
     b.money += gain; b.earned += gain;
-    floatAt(c, '+' + fmtRate(gain));
+    floatAt(c, '+' + fmtRate(gain) + ' ₽');
     fx('tap', c, el.money);
     var bar = document.createElement('i'); bar.className = 'cd';
     c.appendChild(bar);
@@ -500,7 +512,7 @@
       questProgress('merge');
       if (state.tutorial === 2) { state.tutorial = 3; tutorial(); toast('Так и растёт компания! Дальше — сам 🚀'); }
       if (B.lvl(res.v) > b.seen) { b.seen = B.lvl(res.v); newLevel(res.v); }
-      else if (res.up) toast('✨ Повезло: слияние подняло редкость — ' + RARITY[B.rar(res.v)].n.toLowerCase() + ' (доход ×' + String(B.RARITY_MULT[B.rar(res.v)]).replace('.', ',') + ')');
+      else if (res.up) toast('✨ Повезло: слияние подняло редкость — ' + RARITY[B.rar(res.v)].n.toLowerCase() + ' (доход ' + mult(B.RARITY_MULT[B.rar(res.v)]) + ')');
       markPairs(); updateUi(true);
       return;
     } else {
@@ -515,7 +527,7 @@
   function newLevel(v) {
     var s = staff(v), b = biz(), lvl = B.lvl(v);
     modal('<div class="big-ico">' + face(b.type, v, 'av-big') + '</div><h2>Новый сотрудник: ' + esc(s.n) + '</h2>' +
-      '<p>Уровень ' + lvl + ' · приносит ' + fmtRate(B.cellIncome(v) * B.incomeMult(b)) + ' ₽/сек' + (B.rar(v) ? ' · ' + RARITY[B.rar(v)].n.toLowerCase() : '') + '</p>' +
+      '<p>Уровень ' + lvl + ' · приносит ' + perHour(B.cellIncome(v) * B.incomeMult(b)) + (B.rar(v) ? ' · ' + RARITY[B.rar(v)].n.toLowerCase() : '') + '</p>' +
       '<div class="quote">«' + esc(s.j) + '»</div>' +
       (lvl === B.HOLDING_UNLOCK_LEVEL ? '<p>🏗️ Ты дорос до 5-го уровня — второй бизнес холдинга появится в следующем обновлении.</p>' : '') +
       '<div class="btns"><button class="btn btn-primary">Круто!</button></div>',
@@ -630,11 +642,11 @@
   }
   function showRooms() {
     var b = biz(), d = def();
-    var html = '<div class="big-ico">' + d.rooms[b.room].e + '</div><h2>Помещения</h2><p>Переезд: деньги сгорают, сотрудники едут с тобой. Места больше, доход — в разы выше.</p><div class="list left">';
+    var html = '<div class="big-ico">' + d.rooms[b.room].e + '</div><h2>Помещения</h2><p>Переезд: деньги сгорают, сотрудники едут с тобой. Каждая ступень — доход выше, иногда — новый ряд мест.</p><div class="list left">';
     d.rooms.forEach(function (r, i) {
       var R = B.ROOMS[i];
       html += '<div class="card ' + (i === b.room ? 'cur' : i > b.room + 1 ? 'locked' : '') + '"><div class="ico">' + r.e + '</div><div class="txt">' +
-        '<div class="t">' + esc(r.n) + ' <small>×' + R.mult + '</small></div>' +
+        '<div class="t">' + esc(r.n) + ' <small>' + mult(R.mult) + '</small></div>' +
         '<div class="d">' + B.cellCount(i, extra()) + ' мест (' + B.COLS + '×' + R.rows + (extra() ? ' + ' + extra() : '') + ')' + (i === b.room ? ' · ты здесь' : i < b.room ? ' · пройдено' : '') + '</div>' +
         (i > b.room ? roomReqHtml(i) : '') + '</div>' +
         (i === b.room + 1 ? '<button class="buy ' + (roomStatus(i).ok ? '' : 'poor') + '" data-move="' + i + '">Переехать</button>' : '') +
@@ -658,7 +670,7 @@
     tapCd = {};
     buildGrid(); updateUi(true); save(true);
     haptic('success');
-    modal('<div class="big-ico">' + r.e + '</div><h2>Переезд: ' + esc(r.n) + '!</h2><p>Теперь ' + B.cellCount(idx, extra()) + ' мест и доход ×' + R.mult + '. Команда уже раскладывает вещи.</p>' +
+    modal('<div class="big-ico">' + r.e + '</div><h2>Переезд: ' + esc(r.n) + '!</h2><p>Теперь ' + B.cellCount(idx, extra()) + ' мест и доход ' + mult(R.mult) + '. Команда уже раскладывает вещи.</p>' +
       '<div class="btns"><button class="btn btn-primary">Работаем!</button></div>', function (root, close) { root.querySelector('button').onclick = close; });
   }
 
@@ -682,7 +694,7 @@
     var d = def(), rl = $('rooms-list');
     rl.innerHTML = d.rooms.map(function (r, i) {
       var R = B.ROOMS[i];
-      return '<div class="card ' + (i === b.room ? 'cur' : '') + '"><div class="ico">' + r.e + '</div><div class="txt"><div class="t">' + esc(r.n) + ' <small>×' + R.mult + '</small></div>' +
+      return '<div class="card ' + (i === b.room ? 'cur' : '') + '"><div class="ico">' + r.e + '</div><div class="txt"><div class="t">' + esc(r.n) + ' <small>' + mult(R.mult) + '</small></div>' +
         '<div class="d">' + B.cellCount(i, extra()) + ' мест' + (i === b.room ? ' · ты здесь' : i < b.room ? ' · пройдено' : '') + '</div>' + (i > b.room ? roomReqHtml(i) : '') + '</div>' +
         (i === b.room + 1 ? '<button class="buy ' + (roomStatus(i).ok ? '' : 'poor') + '" data-rooms>Переезд</button>' : '') + '</div>';
     }).join('');
@@ -690,7 +702,7 @@
       var lvl = i + 1, known = lvl <= b.seen;
       return '<div class="card team-card ' + (known ? '' : 'locked') + '"><div class="ico">' + (known ? face(b.type, lvl) : '❔') + '</div><div class="txt">' +
         '<div class="t">' + (known ? esc(s.n) : '???') + ' <small>ур. ' + lvl + '</small></div>' +
-        '<div class="d">' + fmtRate(B.levelIncome(lvl)) + ' ₽/сек × бонусы · редкий ×1,5, эпик ×2,5, лега ×5</div>' +
+        '<div class="d">' + perHour(B.levelIncome(lvl)) + ' × бонусы · редкий ' + mult(B.RARITY_MULT[1]) + ', эпик ' + mult(B.RARITY_MULT[2]) + ', лега ' + mult(B.RARITY_MULT[3]) + '</div>' +
         '<div class="joke">' + (known ? '«' + esc(s.j) + '»' : 'Объедини двух «' + esc(d.staff[i - 1].n) + '», чтобы познакомиться') + '</div></div></div>';
     }).join('');
   }
@@ -746,7 +758,7 @@
         packBtn(id) + '</div>' + oddsHtml(P.chances) + '</div>';
     });
     html += '<div class="card info"><div class="txt"><div class="t">Как работает редкость</div><div class="d">' +
-      '<span class="l1">Редкий</span> — доход ×1,5, <span class="l2">эпический</span> — ×2,5, <span class="l3">легендарный</span> — ×5.<br>' +
+      '<span class="l1">Редкий</span> — доход ' + mult(B.RARITY_MULT[1]) + ', <span class="l2">эпический</span> — ' + mult(B.RARITY_MULT[2]) + ', <span class="l3">легендарный</span> — ' + mult(B.RARITY_MULT[3]) + '.<br>' +
       'Сливать можно двух одного уровня — редкость не мешает. Результат берёт <b>лучшую</b> редкость из двух. ' +
       'Если оба одной редкости, есть шанс, что новый станет на ступень выше: обычные — 3%, редкие — 10%, эпические — 5%.<br>Кнопка «Нанять» даёт обычных.</div></div></div>';
     $('agency').innerHTML = html;
@@ -1049,7 +1061,7 @@
       var list = (data.list || []).map(function (f) {
         var d = BIZ[f.business];
         return '<div class="card fr"><div class="ico">' + (d ? d.icon : '🏢') + '</div><div class="txt"><div class="t">' + esc(f.name || 'Друг') + '</div>' +
-          '<div class="d">' + (d ? esc(d.name) + ' · ' : '') + 'ур. ' + (f.level || 1) + ' · ' + fmtRate(f.income || 0) + ' ₽/сек</div></div></div>';
+          '<div class="d">' + (d ? esc(d.name) + ' · ' : '') + 'ур. ' + (f.level || 1) + ' · ' + perHour(f.income || 0) + '</div></div></div>';
       }).join('');
       box.innerHTML = head + '<div class="card col"><div class="t">Приглашено: <span class="acc">' + invited + '</span></div>' + ladderHtml(invited, rewards, true) + '</div>' +
         '<button class="btn btn-primary btn-wide" data-invite>📨 Пригласить друга</button>' +
@@ -1171,7 +1183,7 @@
     var d = def(), now = Date.now(), inc = income(now), rush = rushOn(now);
     el.money.innerHTML = fmt(b.money) + ' <span>₽</span>';
     var f = B.needsFactor(b, now);
-    el.rate.innerHTML = '<b>+' + fmtRate(inc) + ' ₽/сек</b>' + (rush ? ' <em class="x2">⚡×' + B.RUSH_MULT + '</em>' : '') + (f < 1 ? ' <em class="tired-t">😩 −' + Math.round((1 - f) * 100) + '%</em>' : ' · пока тебя нет, тоже');
+    el.rate.innerHTML = '<b>+' + perHour(inc) + '</b>' + (rush ? ' <em class="x2">⚡×' + B.RUSH_MULT + '</em>' : '') + (f < 1 ? ' <em class="tired-t">😩 −' + Math.round((1 - f) * 100) + '%</em>' : ' · пока тебя нет, тоже');
     var cost = B.hireCost(b), full = freeCell() < 0, inbox = b.inbox.length;
     var bs = (full ? 'full' : inbox ? 'inbox' + inbox : b.money < cost ? 'poor' : 'ok') + cost;
     if (bs !== lastBtnState || force) {
@@ -1202,8 +1214,8 @@
       var p = Math.min(1, b.money / next.needMoney);
       el.nextRoom.classList.toggle('ready', st.ok);
       var nh = st.ok
-        ? '<b>' + r.e + ' Можно переезжать: ' + esc(r.n) + ' · ×' + next.mult + '</b> — нажми'
-        : '<span class="nr-l">Дальше: <b>' + r.e + ' ' + esc(r.s) + ' ×' + next.mult + '</b></span><span class="nr-r">' + (st.lvlOk ? '✅' : '⏳') + face(b.type, next.needLevel, 'av-i') + ' · ' + (st.moneyOk ? '✅ ' : '') + rub(next.needMoney) + '</span>' +
+        ? '<b>' + r.e + ' Можно переезжать: ' + esc(r.n) + ' · ' + mult(next.mult) + '</b> — нажми'
+        : '<span class="nr-l">Дальше: <b>' + r.e + ' ' + esc(r.s) + ' ' + mult(next.mult) + '</b></span><span class="nr-r">' + (st.lvlOk ? '✅' : '⏳') + face(b.type, next.needLevel, 'av-i') + ' · ' + (st.moneyOk ? '✅ ' : '') + rub(next.needMoney) + '</span>' +
           '<div class="bar"><i style="width:' + (p * 100).toFixed(1) + '%"></i></div>';
       if (el.nextRoom._nh !== nh) { el.nextRoom._nh = nh; el.nextRoom.innerHTML = nh; }
     } else {
@@ -1211,7 +1223,7 @@
       el.nextRoom._nh = ''; el.nextRoom.innerHTML = '🏁 Это лучшее помещение на сегодня. Новые — в следующих обновлениях.';
     }
     setRoomAttr(b.room);
-    el.chipRoom.textContent = d.rooms[b.room].e + ' ' + d.rooms[b.room].s + ' · ×' + B.ROOMS[b.room].mult;
+    el.chipRoom.textContent = d.rooms[b.room].e + ' ' + d.rooms[b.room].s + ' · ' + mult(B.ROOMS[b.room].mult);
     var open = b.seen >= B.HOLDING_UNLOCK_LEVEL;
     el.chipLock.classList.toggle('open', open);
     el.chipLock.innerHTML = open ? '<span>🏗️ 2-й бизнес — скоро</span>' : '<span>🔒 2-й бизнес — на 5-м уровне</span>';
@@ -1222,7 +1234,7 @@
     else if (full && !hasPair()) hint = next ? 'Мест нет и пар нет — копи на переезд' : 'Мест нет — объединяй, когда появятся пары';
     else if (hasPair()) hint = 'Перетащи одинаковых друг на друга — уровень выше';
     else if (inbox) hint = '🪑 В приёмной ждут — нажми «Из приёмной»';
-    else hint = 'Тапни по сотруднику — +2 сек его дохода';
+    else hint = 'Тапни по сотруднику — +' + B.TAP_SECONDS + ' сек его дохода';
     if (el.hint.textContent !== hint) el.hint.textContent = hint;
     if (force && activeView === 'upgrades') renderUpgrades();
     if (activeView === 'shop' && (force || now - lastAgency > 1000)) { lastAgency = now; renderAgency(); }
@@ -1335,8 +1347,8 @@
     for (var i = 0; i < g.length; i++) if (g[i]) idx.push(i);
     if (!idx.length) return;
     var k = idx[Math.floor(Math.random() * idx.length)];
-    var gain = B.cellIncome(g[k]) * B.incomeMult(biz()) * B.needsFactor(biz(), Date.now()) * (rushOn() ? B.RUSH_MULT : 1) * 2.6;
-    fx('income', cells[k], '+' + fmtRate(gain));
+    var gain = B.cellIncome(g[k]) * B.incomeMult(biz()) * B.needsFactor(biz(), Date.now()) * (rushOn() ? B.RUSH_MULT : 1);
+    fx('income', cells[k], '+' + fmtK(gain * 3600) + '/ч');
   }
   function frame() { tick(); requestAnimationFrame(frame); }
   function tick() {
