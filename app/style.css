@@ -534,3 +534,20 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 .seg.seg4 { grid-template-columns: repeat(4, 1fr); margin-bottom: 12px; }
 .grid.lockrow .cell.locked { flex-direction: row; gap: 4px; padding: 0 4px; --ch: 38px; }
 .grid.lockrow .cell.locked .nm { margin: 0; -webkit-line-clamp: 1; white-space: nowrap; text-overflow: ellipsis; display: block; }
+
+/* ---------- Рисованные сотрудники (app/avatars.js) ---------- */
+.av { display: block; width: auto; max-width: none; pointer-events: none; -webkit-user-drag: none; user-select: none; }
+.cell .em .av { height: calc(var(--ch) * .8); margin: 0 auto; }
+.grid.art .cell .em { line-height: 0; }
+html:not([data-theme]) .grid.art .cell:not(.locked) .nm { position: relative; z-index: 3; margin-top: calc(var(--ch) * -.2); text-shadow: 0 1px 2px #000, 0 0 4px rgba(0, 0, 0, .9); }
+.ladder.art { display: flex; align-items: flex-end; letter-spacing: 0; }
+.ladder.art .av-s { height: 25px; flex: none; margin-right: -4px; }
+.staff-row b .av { height: 36px; margin: 0 auto; }
+.sheet .big-ico .av-big { height: 112px; margin: 0 auto; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .45)); }
+.card .ico .av { height: 42px; margin-top: 2px; }
+.team-card .ico .av { height: 38px; }
+.rc-front b .av { height: 54px; margin: 0 auto; }
+.reveal.n5 .rc-front b .av { height: 46px; }
+.av-i { display: inline-block; height: 1.7em; vertical-align: -.5em; margin: 0 1px; }
+.seg.seg6 { grid-template-columns: repeat(6, 1fr); }
+.seg.seg2 { grid-template-columns: 1fr 1fr; margin-bottom: 12px; }

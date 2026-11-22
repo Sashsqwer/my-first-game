@@ -247,7 +247,7 @@ window.__mockNet = {
   }
 
   // 9. Узкий и широкий экраны: нет горизонтального скролла
-  for (const th of ['', 'a', 'b', 'c']) for (const w of [320, 390, 430]) {
+  for (const th of ['', 'a', 'b', 'c', 'd', 'e']) for (const w of [320, 390, 430]) {
     const { ctx: c2, page: p2 } = await newPage({ viewport: { width: w, height: w === 320 ? 568 : 760 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, { query: '?theme=' + (th || 'old') });
     const w0 = w; { const w = (th ? th + ' ' : '') + w0;
     await noHScroll(p2, `выбор ${w}px`);
@@ -313,13 +313,13 @@ window.__mockNet = {
     await c6.close();
   }
 
-  // 11. Пробные темы A/B/C и текущая: скриншоты в docs/screens/themes/ + коллаж
+  // 11. Пробные темы A–E и текущая: скриншоты в docs/screens/themes/ + коллаж
   const OFFICE = {
     it: [25, 4, 13, 3, 12, 2, 2, 31, 1, 1, 0, 0],
     coffee: [5, 14, 3, 23, 2, 2, 12, 1, 1, 34, 0, 0],
     barber: [26, 5, 4, 14, 3, 3, 2, 22, 1, 1, 11, 0]
   };
-  for (const th of ['old', 'a', 'b', 'c']) {
+  for (const th of ['old', 'a', 'b', 'c', 'd', 'e']) {
     const { ctx: ct, page: pt } = await newPage(iphone, { query: '?theme=' + th });
     const ts = name => pt.screenshot({ path: path.join(TOUT, th + '-' + name + '.jpg'), type: 'jpeg', quality: 82 });
     await ts('1-choose');
@@ -388,6 +388,53 @@ window.__mockNet = {
     const h = await pg.evaluate(() => document.body.scrollHeight);
     await pg.setViewportSize({ width: 1320, height: h });
     await pg.screenshot({ path: path.join(OUT, 'themes-compare.png') });
+    await ctx.close();
+  }
+  // коллаж 2: темы A–E с рисованными сотрудниками
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1640, height: 1220 }, deviceScaleFactor: 1.25 });
+    const pg = await ctx.newPage();
+    const img = n => 'data:image/jpeg;base64,' + fs.readFileSync(path.join(TOUT, n + '.jpg')).toString('base64');
+    const cols = [['a', 'A · Неоновая сцена'], ['b', 'B · Премиум-золото'], ['c', 'C · Кибер-комикс'], ['d', 'D · Диорама'], ['e', 'E · Настолка']];
+    const row = bz => cols.map(([t, n]) => `<figure><figcaption>${n}</figcaption><img src="${img(t + '-2-office-' + bz)}"></figure>`).join('');
+    await pg.setContent(`<html><body style="margin:0;background:#0b0c12;font:700 22px -apple-system,Segoe UI,Roboto,sans-serif;color:#fff">
+      <style>.r{display:grid;grid-template-columns:repeat(5,300px);gap:20px;padding:0 20px 18px}figure{margin:0}figcaption{padding:8px 2px;text-align:center}img{width:300px;border-radius:22px;display:block;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+      h1{font-size:26px;margin:0;padding:18px 20px 6px}h2{font-size:18px;color:#9aa3bb;margin:0;padding:4px 20px 0;font-weight:600}</style>
+      <h1>Стартап с нуля — 5 вариантов оформления, рисованные сотрудники</h1><h2>💻 IT-стартап</h2><div class="r">${row('it')}</div><h2>☕ Кофейня</h2><div class="r">${row('coffee')}</div></body></html>`);
+    await pg.waitForTimeout(400);
+    const h = await pg.evaluate(() => document.body.scrollHeight);
+    await pg.setViewportSize({ width: 1640, height: h });
+    await pg.screenshot({ path: path.join(OUT, 'themes-compare-2.png') });
+    await ctx.close();
+  }
+  // лист всех 64 сотрудников (8 бизнесов × 8 уровней) + проверка, что все SVG разные
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1240, height: 900 }, deviceScaleFactor: 1.5 });
+    const pg = await ctx.newPage();
+    pg.on('pageerror', e => problems.push('[pageerror] лист: ' + e.message));
+    await pg.goto(URL + '?theme=old'); await pg.waitForTimeout(300);
+    const dup = await pg.evaluate(() => {
+      const C = window.CONTENT, A = window.GameAvatars, seen = {}, d = [];
+      document.body.innerHTML = '<div id="s"></div>'; document.body.style.overflow = 'visible';
+      const s = document.getElementById('s');
+      s.style.cssText = 'display:grid;grid-template-columns:118px repeat(8,132px);gap:6px;padding:16px;background:#151a26;color:#fff;font:600 12px -apple-system,Segoe UI,Roboto,sans-serif';
+      s.insertAdjacentHTML('beforeend', '<div style="grid-column:1/-1;font-size:20px;padding:0 0 8px">Стартап с нуля — все сотрудники (рисованные кодом, app/avatars.js)</div>');
+      for (const bz of C.ORDER) {
+        s.insertAdjacentHTML('beforeend', `<div style="align-self:center;font-size:14px">${C.BIZ[bz].icon} ${C.BIZ[bz].name}</div>`);
+        C.BIZ[bz].staff.forEach((st, i) => {
+          const svg = A.svg(bz, i + 1, 0); if (seen[svg]) d.push(bz + '-' + (i + 1)); seen[svg] = 1;
+          s.insertAdjacentHTML('beforeend', `<div style="background:#232a3d;border-radius:12px;text-align:center;padding:6px 4px"><div style="height:104px;display:flex;justify-content:center">${A.avatar(bz, i + 1, 0)}</div><div style="min-height:2.4em">${i + 1}. ${st.n}</div></div>`);
+        });
+      }
+      s.insertAdjacentHTML('beforeend', '<div style="align-self:center;font-size:14px">Редкость</div>' + [0, 1, 2, 3].map(r => `<div style="background:#232a3d;border-radius:12px;text-align:center;padding:6px 4px"><div style="height:104px;display:flex;justify-content:center">${A.avatar('coffee', 5, r)}</div>${['обычный', 'редкий', 'эпик', 'лега'][r]}</div>`).join(''));
+      document.querySelectorAll('.av').forEach(i => { i.style.height = '104px'; });
+      return d;
+    });
+    if (dup.length) problems.push('[avatars] одинаковые сотрудники: ' + dup.join(', '));
+    await pg.waitForTimeout(300);
+    const h = await pg.evaluate(() => document.getElementById('s').scrollHeight);
+    await pg.setViewportSize({ width: 1240, height: h });
+    await pg.screenshot({ path: path.join(OUT, 'avatars-sheet.png') });
     await ctx.close();
   }
 

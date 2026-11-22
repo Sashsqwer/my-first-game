@@ -241,5 +241,9 @@
     { need: 25, e: '🟡', s: 'Легенда', title: 'Легендарный сотрудник' }
   ];
 
-  root.CONTENT = { BIZ: BIZ, ORDER: ORDER, RARITY: RARITY, PACKS: PACKS, QUESTS: QUESTS, FRIEND_STEPS: FRIEND_STEPS };
+  // Нарисованные картинки сотрудников: app/img/staff/<бизнес>-<уровень>.webp (например 'coffee-1').
+  // Кого нет в списке — рисуется кодом (app/avatars.js). Добавил картинку — допиши её имя сюда.
+  var STAFF_IMG = [];
+
+  root.CONTENT = { BIZ: BIZ, ORDER: ORDER, RARITY: RARITY, PACKS: PACKS, QUESTS: QUESTS, FRIEND_STEPS: FRIEND_STEPS, STAFF_IMG: STAFF_IMG };
 })(this);

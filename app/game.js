@@ -163,6 +163,11 @@
     if (type) document.documentElement.setAttribute('data-biz', type);
     else document.documentElement.removeAttribute('data-biz');
   }
+  // номер помещения (0..2) — темы показывают, как растёт здание (D: этажи на фоне)
+  function setRoomAttr(room) {
+    var r = String(room || 0), h = document.documentElement;
+    if (h.getAttribute('data-room') !== r) h.setAttribute('data-room', r);
+  }
 
   // ---------- DOM ----------
   function $(id) { return document.getElementById(id); }
@@ -202,6 +207,12 @@
   // ---------- Сотрудник: карточка ----------
   function rarCls(v) { var r = B.rar(v); return r ? ' r' + r : ''; }
   function rarTag(v) { var r = B.rar(v); return r ? '<span class="rt">' + RARITY[r].s + '</span>' : ''; }
+  // Лицо сотрудника: рисованный SVG (app/avatars.js, или картинка img/staff/*.webp) либо эмодзи — ⚙️ «Сотрудники»
+  function artOn() { var A = window.GameAvatars; return !!(A && A.mode() !== 'emoji'); }
+  function face(type, v, cls) {
+    var lvl = B.lvl(v), s = BIZ[type].staff[lvl - 1];
+    return artOn() ? window.GameAvatars.avatar(type, lvl, B.rar(v), cls) : s.e;
+  }
   function empName(v, d) { var s = (d || def()).staff[B.lvl(v) - 1]; return s.n + (B.rar(v) ? ' · ' + RARITY[B.rar(v)].n.toLowerCase() : ''); }
 
   // ---------- Выбор бизнеса ----------
@@ -214,7 +225,7 @@
       var card = document.createElement('button');
       card.className = 'biz biz-' + type; card.dataset.type = type;
       card.innerHTML = '<div class="bi">' + d.icon + '</div><h3>' + esc(d.name) + '</h3><p>' + esc(d.desc) + '</p>' +
-        '<div class="ladder">' + d.staff.map(function (s) { return s.e; }).join('') + '</div>';
+        '<div class="ladder' + (artOn() ? ' art' : '') + '">' + d.staff.map(function (s, i) { return face(type, i + 1, 'av-s'); }).join('') + '</div>';
       card.onclick = function () { chooseDetails(type); };
       list.appendChild(card);
     });
@@ -224,7 +235,7 @@
     haptic('select');
     modal('<div class="big-ico">' + d.icon + '</div><h2>' + esc(d.name) + '</h2><p>' + esc(d.desc) + '</p>' +
       '<div class="path">' + d.rooms.map(function (r) { return '<span>' + r.e + ' ' + esc(r.s) + '</span>'; }).join('<em>→</em>') + '</div>' +
-      '<div class="staff-row">' + d.staff.map(function (s, i) { return '<div><b>' + s.e + '</b><small>' + (i + 1) + '</small></div>'; }).join('') + '</div>' +
+      '<div class="staff-row">' + d.staff.map(function (s, i) { return '<div><b>' + face(type, i + 1) + '</b><small>' + (i + 1) + '</small></div>'; }).join('') + '</div>' +
       '<p class="small-l">Команда хочет: ' + d.needs.map(function (n) { return n.e + ' ' + esc(n.n.toLowerCase()); }).join(', ') + '</p>' +
       '<div class="btns"><button class="btn btn-primary" data-start>Открыть ' + d.icon + '</button><button class="btn btn-dark" data-close>Посмотреть другие</button></div>',
       function (root, close) {
@@ -247,6 +258,7 @@
   function buildGrid() {
     var b = biz();
     el.grid.innerHTML = ''; cells = [];
+    el.grid.classList.toggle('art', artOn());
     for (var i = 0; i < b.grid.length; i++) {
       var c = document.createElement('div');
       c.className = 'cell'; c.dataset.i = i;
@@ -363,15 +375,16 @@
     el.grid.classList.toggle('lockrow', lockRow);
     el.grid.style.setProperty('--ch', h + 'px');
   }
+  function deco() { var T = window.GameTheme; return T && T.cellDeco ? T.cellDeco() : ''; }
   function cellHtml(v) {
     var s = staff(v);
-    return '<i class="pd"></i>' + (B.rar(v) ? '<i class="sh"></i>' : '') + '<span class="lv">' + B.lvl(v) + '</span>' + rarTag(v) + '<span class="em">' + s.e + '</span><span class="nm">' + esc(s.s) + '</span>';
+    return deco() + '<i class="pd"></i>' + (B.rar(v) ? '<i class="sh"></i>' : '') + '<span class="lv">' + B.lvl(v) + '</span>' + rarTag(v) + '<span class="em">' + face(biz().type, v) + '</span><span class="nm">' + esc(s.s) + '</span>';
   }
   function renderCell(i) {
     var v = biz().grid[i], c = cells[i];
     if (!c) return;
     c.className = 'cell' + (v ? rarCls(v) + ' lvl-' + B.lvl(v) : ' empty');
-    c.innerHTML = v ? cellHtml(v) : '<i class="pd"></i>';
+    c.innerHTML = v ? cellHtml(v) : deco() + '<i class="pd"></i>';
     c.setAttribute('aria-label', v ? empName(v) + ', уровень ' + B.lvl(v) : 'Пустая клетка');
   }
   function renderCells() {
@@ -500,7 +513,7 @@
 
   function newLevel(v) {
     var s = staff(v), b = biz(), lvl = B.lvl(v);
-    modal('<div class="big-ico">' + s.e + '</div><h2>Новый сотрудник: ' + esc(s.n) + '</h2>' +
+    modal('<div class="big-ico">' + face(b.type, v, 'av-big') + '</div><h2>Новый сотрудник: ' + esc(s.n) + '</h2>' +
       '<p>Уровень ' + lvl + ' · приносит ' + fmtRate(B.cellIncome(v) * B.incomeMult(b)) + ' ₽/сек' + (B.rar(v) ? ' · ' + RARITY[B.rar(v)].n.toLowerCase() : '') + '</p>' +
       '<div class="quote">«' + esc(s.j) + '»</div>' +
       (lvl === B.HOLDING_UNLOCK_LEVEL ? '<p>🏗️ Ты дорос до 5-го уровня — второй бизнес холдинга появится в следующем обновлении.</p>' : '') +
@@ -611,7 +624,7 @@
   }
   function roomReqHtml(idx) {
     var st = roomStatus(idx), s = staff(st.room.needLevel);
-    return '<div class="req"><span class="' + (st.lvlOk ? 'ok' : '') + '">' + (st.lvlOk ? '✅' : '⏳') + ' ' + s.e + ' ' + esc(s.n) + ' (ур. ' + st.room.needLevel + ')</span> · ' +
+    return '<div class="req"><span class="' + (st.lvlOk ? 'ok' : '') + '">' + (st.lvlOk ? '✅' : '⏳') + ' ' + face(biz().type, st.room.needLevel, 'av-i') + ' ' + esc(s.n) + ' (ур. ' + st.room.needLevel + ')</span> · ' +
       '<span class="' + (st.moneyOk ? 'ok' : '') + '">' + (st.moneyOk ? '✅' : '⏳') + ' ' + rub(st.room.needMoney) + '</span></div>';
   }
   function showRooms() {
@@ -674,7 +687,7 @@
     }).join('');
     $('team').innerHTML = d.staff.map(function (s, i) {
       var lvl = i + 1, known = lvl <= b.seen;
-      return '<div class="card team-card ' + (known ? '' : 'locked') + '"><div class="ico">' + (known ? s.e : '❔') + '</div><div class="txt">' +
+      return '<div class="card team-card ' + (known ? '' : 'locked') + '"><div class="ico">' + (known ? face(b.type, lvl) : '❔') + '</div><div class="txt">' +
         '<div class="t">' + (known ? esc(s.n) : '???') + ' <small>ур. ' + lvl + '</small></div>' +
         '<div class="d">' + fmtRate(B.levelIncome(lvl)) + ' ₽/сек × бонусы · редкий ×1,5, эпик ×2,5, лега ×5</div>' +
         '<div class="joke">' + (known ? '«' + esc(s.j) + '»' : 'Объедини двух «' + esc(d.staff[i - 1].n) + '», чтобы познакомиться') + '</div></div></div>';
@@ -770,7 +783,7 @@
     var cards = list.map(function (v, k) {
       var s = d.staff[B.lvl(v) - 1];
       return '<div class="rc' + rarCls(v) + '" style="--d:' + (0.75 + k * 0.32) + 's"><div class="rc-in"><div class="rc-back">📄</div>' +
-        '<div class="rc-front"><span class="lv">' + B.lvl(v) + '</span>' + rarTag(v) + '<b>' + s.e + '</b><small>' + esc(s.s) + '</small></div></div></div>';
+        '<div class="rc-front"><span class="lv">' + B.lvl(v) + '</span>' + rarTag(v) + '<b>' + face(biz().type, v) + '</b><small>' + esc(s.s) + '</small></div></div></div>';
     }).join('');
     var doneAt = 0.75 + list.length * 0.32 + 0.3;
     modal('<div class="pack-open best' + best + '"><div class="po-box">' + (C.PACKS[packId] ? C.PACKS[packId].e : '🎁') + '</div>' +
@@ -960,7 +973,7 @@
       for (var i = 0; i < g.length; i++) if (B.lvl(g[i]) === 1) { if (a < 0) a = i; else if (bIdx < 0) bIdx = i; }
       if (a < 0 || bIdx < 0) { t.innerHTML = ''; return; }
       var ra = cells[a].getBoundingClientRect(), rb = cells[bIdx].getBoundingClientRect();
-      html = '<div class="tip up" style="top:' + (ra.bottom + 18) + 'px"><span class="n">3</span>Перетащи одного на другого — получишь: ' + staff(2).e + ' ' + esc(staff(2).n) + '</div>' +
+      html = '<div class="tip up" style="top:' + (ra.bottom + 18) + 'px"><span class="n">3</span>Перетащи одного на другого — получишь: ' + face(biz().type, 2, 'av-i') + ' ' + esc(staff(2).n) + '</div>' +
         '<div class="hand move" style="left:' + (ra.left + ra.width / 2) + 'px;top:' + (ra.top + ra.height / 2) + 'px;--dx:' + (rb.left - ra.left) + 'px;--dy:' + (rb.top - ra.top) + 'px">👆</div>';
       t.innerHTML = html;
       styleArrow(t.firstChild, ra.left + ra.width / 2 - t.firstChild.getBoundingClientRect().left);
@@ -1187,14 +1200,16 @@
       var st = roomStatus(b.room + 1), r = d.rooms[b.room + 1], need = staff(next.needLevel);
       var p = Math.min(1, b.money / next.needMoney);
       el.nextRoom.classList.toggle('ready', st.ok);
-      el.nextRoom.innerHTML = st.ok
+      var nh = st.ok
         ? '<b>' + r.e + ' Можно переезжать: ' + esc(r.n) + ' · ×' + next.mult + '</b> — нажми'
-        : '<span class="nr-l">Дальше: <b>' + r.e + ' ' + esc(r.s) + ' ×' + next.mult + '</b></span><span class="nr-r">' + (st.lvlOk ? '✅' : '⏳') + need.e + ' · ' + (st.moneyOk ? '✅ ' : '') + rub(next.needMoney) + '</span>' +
+        : '<span class="nr-l">Дальше: <b>' + r.e + ' ' + esc(r.s) + ' ×' + next.mult + '</b></span><span class="nr-r">' + (st.lvlOk ? '✅' : '⏳') + face(b.type, next.needLevel, 'av-i') + ' · ' + (st.moneyOk ? '✅ ' : '') + rub(next.needMoney) + '</span>' +
           '<div class="bar"><i style="width:' + (p * 100).toFixed(1) + '%"></i></div>';
+      if (el.nextRoom._nh !== nh) { el.nextRoom._nh = nh; el.nextRoom.innerHTML = nh; }
     } else {
       el.nextRoom.classList.remove('ready');
-      el.nextRoom.innerHTML = '🏁 Это лучшее помещение на сегодня. Новые — в следующих обновлениях.';
+      el.nextRoom._nh = ''; el.nextRoom.innerHTML = '🏁 Это лучшее помещение на сегодня. Новые — в следующих обновлениях.';
     }
+    setRoomAttr(b.room);
     el.chipRoom.textContent = d.rooms[b.room].e + ' ' + d.rooms[b.room].s + ' · ×' + B.ROOMS[b.room].mult;
     var open = b.seen >= B.HOLDING_UNLOCK_LEVEL;
     el.chipLock.classList.toggle('open', open);
@@ -1254,7 +1269,7 @@
     var b = biz(), d = def();
     modal('<div class="big-ico">⚙️</div><h2>Настройки</h2>' +
       '<p>' + d.icon + ' ' + d.name + ' · ' + d.rooms[b.room].n + '<br>Наймов: ' + b.hires + ' · объединений: ' + b.merges + '<br>Сохранение: на этом устройстве' + (cloud ? ' и в облаке Telegram' : '') + (net() ? '<br>Сервер: подключён ✅' : '') + '</p>' +
-      themePicker() +
+      themePicker() + staffPicker() +
       '<div class="btns"><button class="btn btn-dark" data-close>Закрыть</button><button class="btn btn-ghost" data-reset>Сбросить прогресс</button></div>' +
       '<p style="margin:12px 0 0;font-size:12px;color:var(--dim)">Стартап с нуля · версия 0.3</p>',
       function (root, close) {
@@ -1264,7 +1279,14 @@
           x.onclick = function () {
             var T = window.GameTheme; if (!T) return;
             T.set(x.dataset.themeSet); haptic('select'); close();
-            requestAnimationFrame(function () { fitGrid(); updateUi(true); });
+            requestAnimationFrame(function () { buildGrid(); updateUi(true); });
+          };
+        });
+        root.querySelectorAll('[data-staff-set]').forEach(function (x) {
+          x.onclick = function () {
+            var A = window.GameAvatars; if (!A) return;
+            A.setMode(x.dataset.staffSet); haptic('select'); close();
+            requestAnimationFrame(function () { buildGrid(); updateUi(true); });
           };
         });
       });
@@ -1273,9 +1295,17 @@
   function themePicker() {
     var T = window.GameTheme; if (!T) return '';
     var cur = T.get();
-    return '<p class="small-l" style="margin-bottom:6px">Оформление (пробное)</p><div class="seg seg4 theme-pick">' + T.list.map(function (t) {
+    return '<p class="small-l" style="margin-bottom:6px">Оформление (пробное)</p><div class="seg seg4 seg6 theme-pick">' + T.list.map(function (t) {
       return '<button class="' + (cur === t.id ? 'on' : '') + '" data-theme-set="' + t.id + '">' + t.n + '</button>';
     }).join('') + '</div>';
+  }
+  // Сотрудники: рисованные (SVG/картинки) или смайлики
+  function staffPicker() {
+    var A = window.GameAvatars; if (!A) return '';
+    var m = A.mode();
+    return '<p class="small-l" style="margin-bottom:6px">Сотрудники</p><div class="seg seg2 staff-pick">' +
+      '<button class="' + (m === 'art' ? 'on' : '') + '" data-staff-set="art">🎨 Рисованные</button>' +
+      '<button class="' + (m === 'emoji' ? 'on' : '') + '" data-staff-set="emoji">😀 Смайлики</button></div>';
   }
   function confirmReset() {
     modal('<div class="big-ico">⚠️</div><h2>Сбросить прогресс?</h2><p>Пропадут деньги, сотрудники, помещения, улучшения и осколки. Это нельзя отменить.</p>' +

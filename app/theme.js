@@ -1,15 +1,15 @@
-/* «Стартап с нуля» — пробные оформления (A «Неоновая сцена», B «Премиум-золото», C «Кибер-комикс»).
-   Выбор: ?theme=a|b|c (или ?theme=old — вернуть старое), запоминается в localStorage. По умолчанию — старая тема.
+/* «Стартап с нуля» — пробные оформления (A «Неоновая сцена», B «Премиум-золото», C «Кибер-комикс», D «Диорама», E «Настолка»).
+   Выбор: ?theme=a|b|c|d|e (или ?theme=old — вернуть старое), запоминается в localStorage. По умолчанию — старая тема.
    Здесь: выбор темы, сцена-фон, свои SVG-иконки меню и шапки, эффекты (window.GameFx: монеты, вспышки, частицы).
    Подключается в <head> без defer — чтобы тема встала до первой отрисовки. Стили — themes.css. */
 (function () {
   'use strict';
   var KEY = 'startup_zero_theme';
-  var LIST = [{ id: 'old', n: 'Сейчас' }, { id: 'a', n: 'A' }, { id: 'b', n: 'B' }, { id: 'c', n: 'C' }];
-  var BG = { a: '#07090f', b: '#0d0a12', c: '#120a2a', old: '#0D0F14' };
+  var LIST = [{ id: 'old', n: 'Сейчас' }, { id: 'a', n: 'A' }, { id: 'b', n: 'B' }, { id: 'c', n: 'C' }, { id: 'd', n: 'D' }, { id: 'e', n: 'E' }];
+  var BG = { a: '#07090f', b: '#0d0a12', c: '#120a2a', d: '#0b1030', e: '#3a2417', old: '#0D0F14' };
   var root = document.documentElement;
 
-  function valid(t) { return t === 'a' || t === 'b' || t === 'c'; }
+  function valid(t) { return t === 'a' || t === 'b' || t === 'c' || t === 'd' || t === 'e'; }
   function read() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
   function write(t) { try { if (valid(t)) localStorage.setItem(KEY, t); else localStorage.removeItem(KEY); } catch (e) {} }
 
@@ -72,7 +72,7 @@
     if (!document.querySelector('.scene')) {
       var sc = document.createElement('div');
       sc.className = 'scene'; sc.setAttribute('aria-hidden', 'true');
-      sc.innerHTML = '<div class="sc-wall"></div><div class="sc-room"></div><div class="sc-sign"><i></i></div><div class="sc-tubes"><i></i><i></i><i></i></div>' +
+      sc.innerHTML = '<div class="sc-stars"></div><div class="sc-moon"></div><div class="sc-wall"></div><div class="sc-room"></div><div class="sc-sign"><i></i></div><div class="sc-tubes"><i></i><i></i><i></i></div>' +
         '<div class="sc-floor"><div class="sc-grid"></div></div><div class="sc-spot"></div><div class="sc-city"></div>';
       document.body.insertBefore(sc, document.body.firstChild);
     }
@@ -184,8 +184,24 @@
     node.classList.remove('tbump'); void node.offsetWidth; node.classList.add('tbump');
   }
 
+  // D «Диорама»: каждая клетка — изометрическая комнатка (пол с плитой перекрытия, две стены, окно, лампа и свет).
+  // Цвета — классами из themes2.css (стены в цвете бизнеса, свет — в цвете редкости). Растягивается под клетку.
+  var ROOM = '<svg class="rm" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+    '<polygon class="rm-sl" points="2,66 50,84 50,96 2,78"/><polygon class="rm-sr" points="50,84 98,66 98,78 50,96"/>' +
+    '<polygon class="rm-wl" points="2,66 2,22 50,4 50,48"/><polygon class="rm-wr" points="50,48 50,4 98,22 98,66"/>' +
+    '<polygon class="rm-sh" points="2,66 2,22 50,4 50,48"/>' +
+    '<polygon class="rm-win" points="61,18.1 87,27.9 87,46.4 61,36.6"/><path class="rm-wf" d="M74,23 V41.5 M61,27.4 L87,37.2" vector-effect="non-scaling-stroke"/>' +
+    '<polygon class="rm-pos" points="12,30 29,23.6 29,39.6 12,46"/><polygon class="rm-pos2" points="15,33 26,28.9 26,32.4 15,36.5"/>' +
+    '<polygon class="rm-fl" points="2,66 50,48 98,66 50,84"/>' +
+    '<path class="rm-tl" d="M26,57 L74,75 M26,75 L74,57 M14,61.5 L62,79.5 M38,52.5 L86,70.5 M14,70.5 L62,52.5 M38,79.5 L86,61.5" vector-effect="non-scaling-stroke"/>' +
+    '<ellipse class="rm-pool" cx="50" cy="66" rx="31" ry="11.5"/><polygon class="rm-cone" points="45,19 55,19 78,66 22,66"/>' +
+    '<path class="rm-ed" d="M2,66 V22 L50,4 L98,22 V66 M50,4 V48 M2,66 L50,84 L98,66" vector-effect="non-scaling-stroke"/>' +
+    '<path class="rm-cord" d="M50,4 V13" vector-effect="non-scaling-stroke"/><path class="rm-lamp" d="M43.5,20 Q50,9.5 56.5,20 Z"/></svg>';
+
   window.GameTheme = {
     list: LIST,
+    // доп. разметка клетки для темы (сейчас — только комнатка в D)
+    cellDeco: function () { return theme === 'd' ? ROOM : ''; },
     get: function () { return theme; },
     set: function (t) {
       theme = valid(t) ? t : 'old'; write(theme); apply(); tgColors();
