@@ -11,8 +11,8 @@ html[data-theme="mix"] {
 
 /* ---------- Фон: город, туман, дождь, мокрая улица ---------- */
 html[data-theme="mix"] .sc-x svg.x-city { position: absolute; left: 0; right: 0; bottom: 14%; width: 100%; height: 34%; opacity: .95; }
-html[data-theme="mix"] .sc-x .xc { fill: #0c1020; }
-html[data-theme="mix"] .sc-x .x-city .win { fill: #ffd79a; opacity: .22; }
+html[data-theme="mix"] .sc-x .xc { fill: #131a33; }
+html[data-theme="mix"] .sc-x .x-city .win { fill: #ffd79a; opacity: .4; }
 html[data-theme="mix"] .sc-x i { position: absolute; }
 html[data-theme="mix"] .sc-x .fog { inset: 0; pointer-events: none;
   background: linear-gradient(180deg, transparent 40%, rgba(var(--biz-rgb), .07) 62%, rgba(70, 80, 170, .16) 80%, transparent 96%); }
@@ -56,4 +56,9 @@ html[data-theme="mix"] .btn-rush.on { background: var(--gold-grad); color: #2a1c
 
 @media (prefers-reduced-motion: reduce) {
   html[data-theme="mix"] .sc-x .rain { animation: none; display: none; }
+}
+
+/* узкие телефоны: деньги не обрезаются */
+@media (max-width: 350px) {
+  html:is([data-theme="mix"], [data-theme="k"]) .money { font-size: 30px; letter-spacing: -1px; }
 }

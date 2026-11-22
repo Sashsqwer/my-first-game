@@ -247,8 +247,8 @@ window.__mockNet = {
   }
 
   // 9. Узкий и широкий экраны: нет горизонтального скролла
-  for (const th of ['', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm']) for (const w of [320, 390, 430]) {
-    const { ctx: c2, page: p2 } = await newPage({ viewport: { width: w, height: w === 320 ? 568 : 760 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, { query: '?theme=' + (th || 'old') });
+  for (const th of ['mix', 'k', 'm', 'c', 'b']) for (const w of [320, 390, 430]) {
+    const { ctx: c2, page: p2 } = await newPage({ viewport: { width: w, height: w === 320 ? 568 : 760 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, { query: '?theme=' + th });
     const w0 = w; { const w = (th ? th + ' ' : '') + w0;
     await noHScroll(p2, `выбор ${w}px`);
     await p2.click('.biz[data-type="delivery"]'); await p2.waitForTimeout(250);
@@ -313,13 +313,13 @@ window.__mockNet = {
     await c6.close();
   }
 
-  // 11. Пробные темы A–M и текущая: скриншоты в docs/screens/themes/ + коллаж
+  // 11. Стили: основной (mix) и скины K, M, C, B — скриншоты в docs/screens/themes/ + коллаж final-style.png
   const OFFICE = {
     it: [25, 4, 13, 3, 12, 2, 2, 31, 1, 1, 0, 0],
     coffee: [5, 14, 3, 23, 2, 2, 12, 1, 1, 34, 0, 0],
     barber: [26, 5, 4, 14, 3, 3, 2, 22, 1, 1, 11, 0]
   };
-  for (const th of ['old', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm']) {
+  for (const th of ['mix', 'k', 'm', 'c', 'b']) {
     const { ctx: ct, page: pt } = await newPage(iphone, { query: '?theme=' + th });
     const ts = name => pt.screenshot({ path: path.join(TOUT, th + '-' + name + '.jpg'), type: 'jpeg', quality: 82 });
     await ts('1-choose');
@@ -356,7 +356,7 @@ window.__mockNet = {
     await pt.click('.cell.locked >> nth=0'); await pt.waitForTimeout(350);
     await ts('4-slots');
     await closeModals(pt);
-    if ('fghijklm'.includes(th)) {
+    if (true) {
       // аврал в характере темы (в I — «синий экран»), окно настроек с выбором оформления
       await pt.evaluate(() => { window.__game.state.rush = { until: 0, readyAt: 0 }; });
       await pt.click('#btn-rush'); await pt.waitForTimeout(320);
@@ -365,6 +365,10 @@ window.__mockNet = {
       await pt.click('#btn-settings'); await pt.waitForTimeout(350);
       await ts('11-settings');
       await noHScroll(pt, th + ' настройки');
+      await pt.evaluate(() => { window.__game.state.net.counted = 1; });
+      await pt.click('.modal [data-skins]'); await pt.waitForTimeout(400);
+      await ts('12-skins');
+      await noHScroll(pt, th + ' стили');
       await closeModals(pt);
     }
     await pt.click('.tab[data-view="shop"]'); await pt.waitForTimeout(400);
@@ -384,73 +388,22 @@ window.__mockNet = {
     await ts('8-upgrades');
     await ct.close();
   }
-  // коллаж для владельца: офис IT и кофейня в 4 темах
+  // итоговый коллаж: основной стиль (6 экранов) + 4 скина (офис IT)
   {
-    const ctx = await browser.newContext({ viewport: { width: 1320, height: 1220 }, deviceScaleFactor: 1.25 });
+    const ctx = await browser.newContext({ viewport: { width: 1980, height: 1220 }, deviceScaleFactor: 1.25 });
     const pg = await ctx.newPage();
     const img = n => 'data:image/jpeg;base64,' + fs.readFileSync(path.join(TOUT, n + '.jpg')).toString('base64');
-    const cols = [['old', 'Сейчас'], ['a', 'A · Неоновая сцена'], ['b', 'B · Премиум-золото'], ['c', 'C · Кибер-комикс']];
-    const row = bz => cols.map(([t, n]) => `<figure><figcaption>${n}</figcaption><img src="${img(t + '-2-office-' + bz)}"></figure>`).join('');
+    const fig = (n, c) => `<figure><figcaption>${c}</figcaption><img src="${img(n)}"></figure>`;
+    const main = [['mix-2-office-it', 'Офис IT'], ['mix-2-office-coffee', 'Кофейня'], ['mix-2-office-barber', 'Барбершоп'], ['mix-3-merge', 'Слияние'], ['mix-5-agency', 'Агентство'], ['mix-12-skins', 'Экран «Стили»']].map(x => fig(...x)).join('');
+    const skins = [['k', 'K · Полночь — 1 друг'], ['m', 'M · Ночной Токио — 3 друга'], ['c', 'C · Кибер-комикс — ⭐ 50'], ['b', 'B · Премиум-золото — ⭐ 100']].map(([t, c]) => fig(t + '-2-office-it', c)).join('');
     await pg.setContent(`<html><body style="margin:0;background:#0b0c12;font:700 22px -apple-system,Segoe UI,Roboto,sans-serif;color:#fff">
-      <style>.r{display:grid;grid-template-columns:repeat(4,300px);gap:20px;padding:0 20px 18px}figure{margin:0}figcaption{padding:8px 2px;text-align:center}img{width:300px;border-radius:22px;display:block;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+      <style>.r{display:grid;grid-template-columns:repeat(6,300px);gap:20px;padding:0 20px 18px}figure{margin:0}figcaption{padding:8px 2px;text-align:center}img{width:300px;border-radius:22px;display:block;box-shadow:0 8px 30px rgba(0,0,0,.6)}
       h1{font-size:26px;margin:0;padding:18px 20px 6px}h2{font-size:18px;color:#9aa3bb;margin:0;padding:4px 20px 0;font-weight:600}</style>
-      <h1>Стартап с нуля — 3 варианта оформления</h1><h2>💻 IT-стартап</h2><div class="r">${row('it')}</div><h2>☕ Кофейня</h2><div class="r">${row('coffee')}</div></body></html>`);
+      <h1>Стартап с нуля — основной стиль и скины</h1><h2>Основной (у всех, бесплатно)</h2><div class="r">${main}</div><h2>Скины (открываются в ⚙️ → Стили)</h2><div class="r">${skins}</div></body></html>`);
     await pg.waitForTimeout(400);
     const h = await pg.evaluate(() => document.body.scrollHeight);
-    await pg.setViewportSize({ width: 1320, height: h });
-    await pg.screenshot({ path: path.join(OUT, 'themes-compare.png') });
-    await ctx.close();
-  }
-  // коллаж 2: темы A–E с рисованными сотрудниками
-  {
-    const ctx = await browser.newContext({ viewport: { width: 1640, height: 1220 }, deviceScaleFactor: 1.25 });
-    const pg = await ctx.newPage();
-    const img = n => 'data:image/jpeg;base64,' + fs.readFileSync(path.join(TOUT, n + '.jpg')).toString('base64');
-    const cols = [['a', 'A · Неоновая сцена'], ['b', 'B · Премиум-золото'], ['c', 'C · Кибер-комикс'], ['d', 'D · Диорама'], ['e', 'E · Настолка']];
-    const row = bz => cols.map(([t, n]) => `<figure><figcaption>${n}</figcaption><img src="${img(t + '-2-office-' + bz)}"></figure>`).join('');
-    await pg.setContent(`<html><body style="margin:0;background:#0b0c12;font:700 22px -apple-system,Segoe UI,Roboto,sans-serif;color:#fff">
-      <style>.r{display:grid;grid-template-columns:repeat(5,300px);gap:20px;padding:0 20px 18px}figure{margin:0}figcaption{padding:8px 2px;text-align:center}img{width:300px;border-radius:22px;display:block;box-shadow:0 8px 30px rgba(0,0,0,.6)}
-      h1{font-size:26px;margin:0;padding:18px 20px 6px}h2{font-size:18px;color:#9aa3bb;margin:0;padding:4px 20px 0;font-weight:600}</style>
-      <h1>Стартап с нуля — 5 вариантов оформления, рисованные сотрудники</h1><h2>💻 IT-стартап</h2><div class="r">${row('it')}</div><h2>☕ Кофейня</h2><div class="r">${row('coffee')}</div></body></html>`);
-    await pg.waitForTimeout(400);
-    const h = await pg.evaluate(() => document.body.scrollHeight);
-    await pg.setViewportSize({ width: 1640, height: h });
-    await pg.screenshot({ path: path.join(OUT, 'themes-compare-2.png') });
-    await ctx.close();
-  }
-  // коллаж 3: темы F–J (новые стили)
-  {
-    const ctx = await browser.newContext({ viewport: { width: 1640, height: 1220 }, deviceScaleFactor: 1.25 });
-    const pg = await ctx.newPage();
-    const img = n => 'data:image/jpeg;base64,' + fs.readFileSync(path.join(TOUT, n + '.jpg')).toString('base64');
-    const cols = [['f', 'F · Пиксель-арт'], ['g', 'G · Пластилин'], ['h', 'H · Манга'], ['i', 'I · Офис-95'], ['j', 'J · Стеклянный город']];
-    const row = bz => cols.map(([t, n]) => `<figure><figcaption>${n}</figcaption><img src="${img(t + '-2-office-' + bz)}"></figure>`).join('');
-    await pg.setContent(`<html><body style="margin:0;background:#0b0c12;font:700 22px -apple-system,Segoe UI,Roboto,sans-serif;color:#fff">
-      <style>.r{display:grid;grid-template-columns:repeat(5,300px);gap:20px;padding:0 20px 18px}figure{margin:0}figcaption{padding:8px 2px;text-align:center}img{width:300px;border-radius:22px;display:block;box-shadow:0 8px 30px rgba(0,0,0,.6)}
-      h1{font-size:26px;margin:0;padding:18px 20px 6px}h2{font-size:18px;color:#9aa3bb;margin:0;padding:4px 20px 0;font-weight:600}</style>
-      <h1>Стартап с нуля — ещё 5 вариантов оформления (F–J)</h1><h2>💻 IT-стартап</h2><div class="r">${row('it')}</div><h2>☕ Кофейня</h2><div class="r">${row('coffee')}</div></body></html>`);
-    await pg.waitForTimeout(400);
-    const h = await pg.evaluate(() => document.body.scrollHeight);
-    await pg.setViewportSize({ width: 1640, height: h });
-    await pg.screenshot({ path: path.join(OUT, 'themes-compare-3.png') });
-    await ctx.close();
-  }
-  // коллаж 4: тёмные K–M и для сравнения A, B
-  {
-    const ctx = await browser.newContext({ viewport: { width: 1640, height: 1220 }, deviceScaleFactor: 1.25 });
-    const pg = await ctx.newPage();
-    const img = n => 'data:image/jpeg;base64,' + fs.readFileSync(path.join(TOUT, n + '.jpg')).toString('base64');
-    const cols = [['k', 'K · Полночь'], ['l', 'L · Нуар-казино'], ['m', 'M · Ночной Токио'], ['a', 'A · Неон (было)'], ['b', 'B · Премиум (было)']];
-    const row = bz => cols.map(([t, n]) => `<figure${'ab'.includes(t) ? ' class="old"' : ''}><figcaption>${n}</figcaption><img src="${img(t + '-2-office-' + bz)}"></figure>`).join('');
-    await pg.setContent(`<html><body style="margin:0;background:#0b0c12;font:700 22px -apple-system,Segoe UI,Roboto,sans-serif;color:#fff">
-      <style>.r{display:grid;grid-template-columns:repeat(5,300px);gap:20px;padding:0 20px 18px}figure{margin:0}figcaption{padding:8px 2px;text-align:center}img{width:300px;border-radius:22px;display:block;box-shadow:0 8px 30px rgba(0,0,0,.6)}
-      figure.old figcaption{color:#8a93ab}figure.old img{opacity:.85}
-      h1{font-size:26px;margin:0;padding:18px 20px 6px}h2{font-size:18px;color:#9aa3bb;margin:0;padding:4px 20px 0;font-weight:600}</style>
-      <h1>Стартап с нуля — ещё 3 тёмных оформления (K, L, M) и для сравнения A, B</h1><h2>💻 IT-стартап</h2><div class="r">${row('it')}</div><h2>☕ Кофейня</h2><div class="r">${row('coffee')}</div></body></html>`);
-    await pg.waitForTimeout(400);
-    const h = await pg.evaluate(() => document.body.scrollHeight);
-    await pg.setViewportSize({ width: 1640, height: h });
-    await pg.screenshot({ path: path.join(OUT, 'themes-compare-4.png') });
+    await pg.setViewportSize({ width: 1980, height: h });
+    await pg.screenshot({ path: path.join(OUT, 'final-style.png') });
     await ctx.close();
   }
   // лист всех 64 сотрудников (8 бизнесов × 8 уровней) + проверка, что все SVG разные
@@ -458,7 +411,7 @@ window.__mockNet = {
     const ctx = await browser.newContext({ viewport: { width: 1240, height: 900 }, deviceScaleFactor: 1.5 });
     const pg = await ctx.newPage();
     pg.on('pageerror', e => problems.push('[pageerror] лист: ' + e.message));
-    await pg.goto(URL + '?theme=old'); await pg.waitForTimeout(300);
+    await pg.goto(URL + '?theme=mix'); await pg.waitForTimeout(300);
     const dup = await pg.evaluate(() => {
       const C = window.CONTENT, A = window.GameAvatars, seen = {}, d = [];
       document.body.innerHTML = '<div id="s"></div>'; document.body.style.overflow = 'visible';

@@ -41,6 +41,15 @@
     SLOT_STREAK_DAYS: 7,       // +1 место за 7 дней подряд в календаре наград
     SLOT_MAX: 6,
 
+    // Стили (скины) оформления: mix — основной, бесплатно; остальные — за друзей или ⭐ (оплата ⭐ — позже, пока «скоро»)
+    SKINS: [
+      { id: 'mix', n: 'Основной',       d: 'Полночь, дождь и золото',         free: true },
+      { id: 'k',   n: 'Полночь',        d: 'Строго, чисто, мягкий свет',      friends: 1 },
+      { id: 'm',   n: 'Ночной Токио',   d: 'Дождь, вывески, отражения',       friends: 3 },
+      { id: 'c',   n: 'Кибер-комикс',   d: 'Ярко, сочно, как в комиксе',      stars: 50 },
+      { id: 'b',   n: 'Премиум-золото', d: 'Чёрный бархат и золото',          stars: 100 }
+    ],
+
     // Улучшения
     UPGRADES: {
       boost:  { base: 2000,  growth: 2.0, max: 25 },  // +10% дохода за уровень
@@ -209,8 +218,21 @@
     return Math.round(Math.max(floor || 0, B.incomePerSec(biz, now) * 60 * minutes));
   };
 
+  // ---------- Стили (скины) ----------
+  // открыт ли стиль: бесплатный, за друзей (counted — засчитанные друзья) или куплен за ⭐ (bought — список id)
+  B.skinOpen = function (sk, counted, bought) {
+    if (!sk) return false;
+    if (sk.free) return true;
+    if (sk.friends && (counted || 0) >= sk.friends) return true;
+    return !!(bought && bought.indexOf(sk.id) >= 0);
+  };
+  B.skin = function (id) {
+    for (var i = 0; i < B.SKINS.length; i++) if (B.SKINS[i].id === id) return B.SKINS[i];
+    return null;
+  };
+
   // ---------- Дополнительные места ----------
-  // slots — { friends: 0..3, stars: 0..2, streak: true/false } (state.slots)
+  // slots —{ friends: 0..3, stars: 0..2, streak: true/false } (state.slots)
   B.friendSlots = function (counted) {
     var n = 0;
     for (var i = 0; i < B.SLOT_FRIENDS.length; i++) if ((counted || 0) >= B.SLOT_FRIENDS[i]) n++;

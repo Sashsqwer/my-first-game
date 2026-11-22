@@ -89,7 +89,8 @@
       quests: { day: null, list: [], chest: false },
       rush: { until: 0, readyAt: 0 },
       net: { invited: 0, counted: 0, claimed: [], refBonus: false },
-      slots: { friends: 0, stars: 0, streak: false }
+      slots: { friends: 0, stars: 0, streak: false },
+      skin: 'mix', skinsBought: []
     };
   }
   function valid(s) {
@@ -112,6 +113,9 @@
     s.slots.stars = Math.max(0, Math.min(B.SLOT_STARS.length, Number(s.slots.stars) || 0));
     s.slots.streak = !!s.slots.streak || (s.daily.streak || 0) >= B.SLOT_STREAK_DAYS;
     var extra = B.extraSlots(s.slots);
+    // стили: выбранный и купленные за ⭐; надетый, но уже закрытый — возвращаем основной
+    if (!Array.isArray(s.skinsBought)) s.skinsBought = [];
+    if (!B.skin(s.skin) || !B.skinOpen(B.skin(s.skin), s.net.counted, s.skinsBought)) s.skin = 'mix';
     s.businesses = s.businesses.filter(function (b) { return b && BIZ[b.type]; });
     var oldRooms = !(s.v >= 3);
     s.businesses.forEach(function (b) {
@@ -381,7 +385,7 @@
     avail -= (parseFloat(gcs.paddingTop) || 0) + (parseFloat(gcs.paddingBottom) || 0);
     if (lockRow) avail -= LOCK_H + ggap;
     var colW = (el.grid.clientWidth - (parseFloat(gcs.paddingLeft) || 0) - (parseFloat(gcs.paddingRight) || 0) - ggap * (B.COLS - 1)) / B.COLS;
-    var h = Math.min(colW * 0.94, (avail - ggap * (rows - 1)) / rows);
+    var h = Math.min(colW * 1.12, (avail - ggap * (rows - 1)) / rows);
     h = Math.max(rows > 5 ? 46 : 52, Math.floor(h));
     el.grid.style.gridAutoRows = h + 'px';
     el.grid.style.gridTemplateRows = 'repeat(' + rows + ', ' + h + 'px)' + (lockRow ? ' ' + LOCK_H + 'px' : '');
@@ -1282,19 +1286,13 @@
     var b = biz(), d = def();
     modal('<div class="big-ico">⚙️</div><h2>Настройки</h2>' +
       '<p>' + d.icon + ' ' + d.name + ' · ' + d.rooms[b.room].n + '<br>Наймов: ' + b.hires + ' · объединений: ' + b.merges + '<br>Сохранение: на этом устройстве' + (cloud ? ' и в облаке Telegram' : '') + (net() ? '<br>Сервер: подключён ✅' : '') + '</p>' +
-      themePicker() + staffPicker() +
+      skinsCard() + staffPicker() +
       '<div class="btns"><button class="btn btn-dark" data-close>Закрыть</button><button class="btn btn-ghost" data-reset>Сбросить прогресс</button></div>' +
       '<p style="margin:12px 0 0;font-size:12px;color:var(--dim)">Стартап с нуля · версия 0.3</p>',
       function (root, close) {
         root.querySelector('[data-close]').onclick = close;
         root.querySelector('[data-reset]').onclick = function () { close(); confirmReset(); };
-        root.querySelectorAll('[data-theme-set]').forEach(function (x) {
-          x.onclick = function () {
-            var T = window.GameTheme; if (!T) return;
-            T.set(x.dataset.themeSet); haptic('select'); close();
-            requestAnimationFrame(function () { buildGrid(); updateUi(true); });
-          };
-        });
+        var sk = root.querySelector('[data-skins]'); if (sk) sk.onclick = function () { close(); showSkins(); };
         root.querySelectorAll('[data-staff-set]').forEach(function (x) {
           x.onclick = function () {
             var A = window.GameAvatars; if (!A) return;
@@ -1304,13 +1302,46 @@
         });
       });
   });
-  // Пробные оформления (пока владелец выбирает): старое и A–J
-  function themePicker() {
-    var T = window.GameTheme; if (!T) return '';
-    var cur = T.get();
-    return '<p class="small-l" style="margin-bottom:6px">Оформление (пробное)</p><div class="seg seg4 seg6 theme-pick">' + T.list.map(function (t) {
-      return '<button class="' + (cur === t.id ? 'on' : '') + '" data-theme-set="' + t.id + '">' + t.n + '</button>';
-    }).join('') + '</div>';
+  // ---------- Стили (скины) ----------
+  function skinsCard() {
+    var cur = B.skin(state.skin) || B.SKINS[0];
+    var open = B.SKINS.filter(function (k) { return B.skinOpen(k, state.net.counted, state.skinsBought); }).length;
+    return '<button class="card skins-card" data-skins><div class="ico">🎨</div><div class="txt"><div class="t">Стили: ' + esc(cur.n) + '</div>' +
+      '<div class="d">Открыто ' + open + ' из ' + B.SKINS.length + ' · новые — за друзей и ⭐</div></div></button>';
+  }
+  function skinCond(k) {
+    if (k.free) return 'Бесплатно';
+    if (k.friends) return '👥 ' + k.friends + ' ' + plural(k.friends, 'друг', 'друга', 'друзей');
+    return '⭐ ' + k.stars;
+  }
+  function showSkins() {
+    var cnt = state.net.counted || 0;
+    var html = '<h2>🎨 Стили</h2><p>Оформление всей игры. Основной — у всех, остальные открываются за друзей и ⭐.</p><div class="skins">' +
+      B.SKINS.map(function (k) {
+        var on = state.skin === k.id, open = B.skinOpen(k, cnt, state.skinsBought);
+        var act = on ? '<span class="sk-on">✓ Надет</span>'
+          : open ? '<button class="btn btn-primary sk-btn" data-skin-wear="' + k.id + '">Надеть</button>'
+          : k.friends ? '<button class="btn btn-dark sk-btn" data-skin-friends>🔒 ' + cnt + '/' + k.friends + ' друзей</button>'
+          : '<button class="btn btn-dark sk-btn" data-skin-star="' + k.id + '">🔒 ⭐ ' + k.stars + '</button>';
+        return '<div class="sk' + (on ? ' on' : '') + (open ? '' : ' locked') + '">' +
+          '<div class="sk-prev" data-prev="' + k.id + '"><i class="p1"></i><i class="p2"></i><i class="p3"></i><i class="p4"></i></div>' +
+          '<div class="sk-txt"><b>' + esc(k.n) + '</b><small>' + esc(k.d) + '</small><em>' + skinCond(k) + '</em></div>' + act + '</div>';
+      }).join('') + '</div><div class="btns"><button class="btn btn-dark" data-close>Закрыть</button></div>';
+    modal(html, function (root, close) {
+      root.querySelector('[data-close]').onclick = close;
+      root.querySelectorAll('[data-skin-wear]').forEach(function (x) {
+        x.onclick = function () {
+          var id = x.dataset.skinWear, k = B.skin(id);
+          if (!B.skinOpen(k, state.net.counted, state.skinsBought)) return;
+          state.skin = id; save(true); haptic('success'); close();
+          if (window.GameTheme) window.GameTheme.set(id);
+          requestAnimationFrame(function () { buildGrid(); updateUi(true); });
+          toast('🎨 Стиль «' + k.n + '» надет');
+        };
+      });
+      root.querySelectorAll('[data-skin-friends]').forEach(function (x) { x.onclick = function () { close(); setView('friends'); }; });
+      root.querySelectorAll('[data-skin-star]').forEach(function (x) { x.onclick = function () { toast('⭐ Оплата Telegram Stars появится скоро'); haptic('select'); }; });
+    });
   }
   // Сотрудники: рисованные (SVG/картинки) или смайлики
   function staffPicker() {
@@ -1396,6 +1427,7 @@
   // ---------- Старт ----------
   function boot(loaded) {
     state = loaded ? normalize(loaded) : freshState();
+    if (window.GameTheme) window.GameTheme.set(state.skin);
     if (!state.businesses.length) { showChoose(); }
     else {
       var away = (Date.now() - state.savedAt) / 1000;

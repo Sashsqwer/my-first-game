@@ -551,3 +551,28 @@ html:not([data-theme]) .grid.art .cell:not(.locked) .nm { position: relative; z-
 .av-i { display: inline-block; height: 1.7em; vertical-align: -.5em; margin: 0 1px; }
 .seg.seg6 { grid-template-columns: repeat(6, 1fr); }
 .seg.seg2 { grid-template-columns: 1fr 1fr; margin-bottom: 12px; }
+
+/* ---------- Экран «Стили» (скины) ---------- */
+.skins { display: grid; gap: 8px; margin: 10px 0 4px; text-align: left; }
+.sk { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: center; padding: 8px; border-radius: 16px;
+  background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .08); }
+.sk.on { border-color: rgba(var(--biz-rgb, 120, 200, 255), .6); box-shadow: 0 0 16px -6px rgba(var(--biz-rgb, 120, 200, 255), .8); }
+.sk.locked .sk-prev { filter: saturate(.5) brightness(.75); }
+.sk-prev { position: relative; width: 64px; height: 64px; border-radius: 12px; overflow: hidden; background: var(--pb); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
+.sk-prev i { position: absolute; border-radius: 6px; }
+.sk-prev .p1 { left: 8px; top: 8px; width: 22px; height: 22px; background: var(--pc); box-shadow: 0 0 10px var(--pg); }
+.sk-prev .p2 { right: 8px; top: 8px; width: 22px; height: 22px; background: var(--pc2); }
+.sk-prev .p3 { left: 8px; bottom: 8px; width: 48px; height: 14px; border-radius: 7px; background: var(--pbtn); }
+.sk-prev .p4 { right: 8px; top: 34px; width: 22px; height: 6px; border-radius: 3px; background: var(--pc3); }
+.sk-prev[data-prev="mix"] { --pb: linear-gradient(180deg, #0b1020, #05070c); --pc: #5CE1E6; --pg: rgba(92, 225, 230, .6); --pc2: linear-gradient(180deg, #FFF1C4, #C9962F); --pbtn: linear-gradient(90deg, #FF4DA6, #22b8e0); --pc3: #b4c2ff; }
+.sk-prev[data-prev="k"] { --pb: radial-gradient(circle at 50% 30%, #16203a, #07090f); --pc: #5CE1E6; --pg: rgba(92, 225, 230, .5); --pc2: #1a1f2e; --pbtn: #E8ECF4; --pc3: #6EA8FF; }
+.sk-prev[data-prev="m"] { --pb: linear-gradient(180deg, #16133a, #07060f); --pc: #FF5C9A; --pg: rgba(255, 92, 154, .6); --pc2: #45E0D8; --pbtn: rgba(255, 92, 154, .85); --pc3: #ffc46b; }
+.sk-prev[data-prev="c"] { --pb: linear-gradient(160deg, #2a1466, #120a2a); --pc: #FFE14D; --pg: rgba(255, 225, 77, .5); --pc2: #4ae9ff; --pbtn: linear-gradient(90deg, #ff8a5c, #FF3DA5); --pc3: #FF3DA5; }
+.sk-prev[data-prev="b"] { --pb: linear-gradient(180deg, #1a1420, #0d0a12); --pc: #F3D27D; --pg: rgba(243, 210, 125, .5); --pc2: #2a2030; --pbtn: linear-gradient(90deg, #FFF1C4, #C9962F); --pc3: #8b6cff; }
+.sk-txt { min-width: 0; display: grid; gap: 2px; }
+.sk-txt b { font-size: 15px; }
+.sk-txt small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sk-txt em { font-style: normal; font-size: 12px; color: var(--dim); }
+.sk-btn { min-height: 36px; padding: 0 12px; font-size: 13px; white-space: nowrap; width: auto; }
+.sk-on { font-size: 13px; font-weight: 700; color: var(--biz-hi, #9ff); padding: 0 6px; }
+@media (max-width: 350px) { .sk { grid-template-columns: 52px 1fr; } .sk-prev { width: 52px; height: 52px; } .sk-btn, .sk-on { grid-column: 1 / -1; } }
