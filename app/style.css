@@ -312,6 +312,9 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 .tip::after { content: ""; position: absolute; left: 50%; margin-left: -8px; border: 8px solid transparent; }
 .tip.down::after { bottom: -15px; border-top-color: var(--accent); }
 .tip.up::after { top: -15px; border-bottom-color: var(--accent); }
+.guide-glow { animation: guideGlow 1.4s ease-in-out infinite; }
+@keyframes guideGlow { 50% { box-shadow: 0 0 0 3px rgba(255,255,255,.85), 0 0 18px rgba(255,255,255,.5); } }
+@media (prefers-reduced-motion: reduce) { .guide-glow { animation: none; box-shadow: 0 0 0 3px rgba(255,255,255,.85); } }
 .hand { position: absolute; font-size: 38px; transform: translate(-30%, -10%); filter: drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
 .hand.move { animation: handMove 1.8s ease-in-out infinite; }
 @keyframes handMove {

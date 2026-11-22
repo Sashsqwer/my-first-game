@@ -22,11 +22,24 @@
     } catch (e) { /* ничего */ }
   }
   if (inTg) {
+    // цвета шапки и нижней полосы ставит theme.js — под надетый стиль
     try { tg.ready(); tg.expand(); } catch (e) {}
-    try { if (tgAtLeast('6.1')) { tg.setHeaderColor('#0D0F14'); tg.setBackgroundColor('#0D0F14'); } } catch (e) {}
     try { if (tgAtLeast('7.7')) tg.disableVerticalSwipes(); } catch (e) {}
-    try { if (tgAtLeast('7.7') && tg.setBottomBarColor) tg.setBottomBarColor('#0D0F14'); } catch (e) {}
   }
+  // Кнопка «Назад» Telegram: закрывает окно, а на вкладках — возвращает в офис
+  var backBtn = tgAtLeast('6.1') && tg.BackButton ? tg.BackButton : null, backShown = false;
+  function syncBack() {
+    if (!backBtn) return;
+    var want = modalOpen || (typeof activeView !== 'undefined' && activeView !== 'office' && !el.app.hidden);
+    if (want === backShown) return;
+    backShown = want;
+    try { if (want) backBtn.show(); else backBtn.hide(); } catch (e) {}
+  }
+  function onBack() {
+    if (modalOpen) { if (!curModal || !curModal.sticky) nextModal(); else haptic('error'); return; }
+    if (activeView !== 'office') setView('office');
+  }
+  if (backBtn) { try { backBtn.onClick(onBack); } catch (e) {} }
   var cloud = tgAtLeast('6.9') && tg.CloudStorage ? tg.CloudStorage : null;
 
   // ---------- Сервер (net.js) ----------
@@ -94,21 +107,28 @@
     };
   }
   function valid(s) {
-    return s && (s.v === 1 || s.v === 2 || s.v === VERSION) && Array.isArray(s.businesses) && typeof s.savedAt === 'number';
+    return !!s && typeof s === 'object' && (s.v === 1 || s.v === 2 || s.v === VERSION) && Array.isArray(s.businesses) && typeof s.savedAt === 'number' && isFinite(s.savedAt);
   }
+  function num(v, min, max) { v = Number(v); if (!isFinite(v)) v = min; return Math.max(min, Math.min(max, v)); }
+  function obj(v) { return v && typeof v === 'object' && !Array.isArray(v) ? v : null; }
   // Миграция и починка: старые сохранения (v1) — без редкости, потребностей, агентства
   function normalize(s) {
     var now = Date.now();
-    s.daily = s.daily || { last: null, streak: 0 };
-    s.agency = s.agency || { freeAt: 0, shards: 0 };
-    if (!isFinite(s.agency.shards)) s.agency.shards = 0;
-    s.quests = s.quests || { day: null, list: [], chest: false };
-    s.rush = s.rush || { until: 0, readyAt: 0 };
-    s.net = s.net || { invited: 0, claimed: [], refBonus: false };
+    s.tutorial = num(s.tutorial, 0, 3); s.guide = num(s.guide, 0, 9);
+    s.daily = obj(s.daily) || { last: null, streak: 0 };
+    if (typeof s.daily.last !== 'string' || !/^\d{4}-\d{1,2}-\d{1,2}$/.test(s.daily.last)) s.daily.last = null;
+    s.daily.streak = num(s.daily.streak, 0, 1e5);
+    s.agency = obj(s.agency) || { freeAt: 0, shards: 0 };
+    s.agency.shards = Math.floor(num(s.agency.shards, 0, 1e4)); s.agency.freeAt = num(s.agency.freeAt, 0, 1e15);
+    s.quests = obj(s.quests) || { day: null, list: [], chest: false };
+    if (!Array.isArray(s.quests.list) || s.quests.list.some(function (x) { return !obj(x) || !C.QUESTS[x.id] || !(x.need > 0); })) s.quests = { day: null, list: [], chest: false };
+    s.rush = obj(s.rush) || { until: 0, readyAt: 0 };
+    s.rush.until = num(s.rush.until, 0, 1e15); s.rush.readyAt = num(s.rush.readyAt, 0, 1e15);
+    s.net = obj(s.net) || { invited: 0, claimed: [], refBonus: false };
     if (!Array.isArray(s.net.claimed)) s.net.claimed = [];
-    if (!isFinite(s.net.counted)) s.net.counted = 0;
+    s.net.counted = num(s.net.counted, 0, 1e6); s.net.invited = num(s.net.invited, 0, 1e6);
     // доп. места (с версии 0.3): старым сохранениям — по тому, что уже заработано
-    s.slots = s.slots || { friends: 0, stars: 0, streak: false };
+    s.slots = obj(s.slots) || { friends: 0, stars: 0, streak: false };
     s.slots.friends = Math.max(0, Math.min(B.SLOT_FRIENDS.length, Number(s.slots.friends) || 0), B.friendSlots(s.net.counted));
     s.slots.stars = Math.max(0, Math.min(B.SLOT_STARS.length, Number(s.slots.stars) || 0));
     s.slots.streak = !!s.slots.streak || (s.daily.streak || 0) >= B.SLOT_STREAK_DAYS;
@@ -116,29 +136,44 @@
     // стили: выбранный и купленные за ⭐; надетый, но уже закрытый — возвращаем основной
     if (!Array.isArray(s.skinsBought)) s.skinsBought = [];
     if (!B.skin(s.skin) || !B.skinOpen(B.skin(s.skin), s.net.counted, s.skinsBought)) s.skin = 'mix';
-    s.businesses = s.businesses.filter(function (b) { return b && BIZ[b.type]; });
+    s.businesses = s.businesses.filter(function (b) { return obj(b) && BIZ[b.type]; });
     var oldRooms = !(s.v >= 3);
     s.businesses.forEach(function (b) {
       // до версии 3 было 3 помещения (×1, ×3 4×4, ×10 4×5) — переводим в ближайшую из 8 ступеней
       if (oldRooms) b.room = B.ROOM_FROM_V2[b.room] || 0;
-      b.upgrades = b.upgrades || { boost: 0, chairs: 0, pr: 0 };
-      if (!(b.room >= 0 && b.room < B.ROOMS.length)) b.room = 0;
+      var up = obj(b.upgrades) || {};
+      b.upgrades = { boost: Math.floor(num(up.boost, 0, B.UPGRADES.boost.max)), chairs: Math.floor(num(up.chairs, 0, B.UPGRADES.chairs.max)), pr: Math.floor(num(up.pr, 0, B.UPGRADES.pr.max)) };
+      b.room = Math.floor(num(b.room, 0, B.ROOMS.length - 1));
+      b.hires = Math.floor(num(b.hires, 0, 1e4)); b.merges = Math.floor(num(b.merges, 0, 1e7));
       var need = B.cellCount(b.room, extra);
-      b.grid = (b.grid || []).map(function (v) { v = Number(v) || 0; return B.lvl(v) >= 1 && B.lvl(v) <= B.MAX_LEVEL && B.rar(v) <= 3 ? v : 0; });
+      b.grid = (Array.isArray(b.grid) ? b.grid : []).slice(0, B.cellCount(B.ROOMS.length - 1, B.SLOT_MAX)).map(function (v) { v = Number(v) || 0; return B.lvl(v) >= 1 && B.lvl(v) <= B.MAX_LEVEL && B.rar(v) <= 3 ? v : 0; });
       while (b.grid.length < need) b.grid.push(0);
       // v1: сохранение было в момент savedAt — шкалы считаем полными на тот момент
-      if (!Array.isArray(b.needs) || b.needs.length !== 3) { var t0 = s.savedAt || now; b.needs = [t0, t0, t0]; }
-      b.inbox = Array.isArray(b.inbox) ? b.inbox.filter(function (v) { return v > 0; }) : [];
-      b.seen = Math.max(b.seen || 1, B.maxLevel(b));
-      if (!isFinite(b.money)) b.money = 0;
-      if (!isFinite(b.earned)) b.earned = 0;
+      if (!Array.isArray(b.needs) || b.needs.length !== 3 || !b.needs.every(function (t) { return isFinite(t); })) { var t0 = s.savedAt || now; b.needs = [t0, t0, t0]; }
+      b.inbox = Array.isArray(b.inbox) ? b.inbox.map(Number).filter(function (v) { return B.lvl(v) >= 1 && B.lvl(v) <= B.MAX_LEVEL && B.rar(v) <= 3; }).slice(0, 200) : [];
+      b.seen = Math.floor(num(Math.max(Number(b.seen) || 1, B.maxLevel(b)), 1, B.MAX_LEVEL));
+      b.money = num(b.money, 0, 1e30); b.earned = num(b.earned, 0, 1e30);
     });
     if (!(s.active >= 0 && s.active < s.businesses.length)) s.active = 0;
     s.v = VERSION;
+    fixClock(s, now);
     return s;
   }
+  // Часы на телефоне перевели назад: таймеры не должны «уехать» на дни вперёд, шкалы — быть из будущего
+  function fixClock(s, now) {
+    s.agency.freeAt = Math.min(s.agency.freeAt, now + B.PACKS.free.cooldownH * HOUR);
+    s.rush.readyAt = Math.min(s.rush.readyAt, now + B.RUSH_COOLDOWN_H * HOUR);
+    s.rush.until = Math.min(s.rush.until, now + B.RUSH_MIN * MIN);
+    s.businesses.forEach(function (b) { b.needs = b.needs.map(function (t) { return Math.min(t, now); }); });
+  }
   function readLocal() {
-    try { var s = JSON.parse(localStorage.getItem(SAVE_KEY)); return valid(s) ? s : null; } catch (e) { return null; }
+    var raw = null;
+    try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return null; }
+    if (!raw) return null;
+    try { var s = JSON.parse(raw); if (valid(s)) return s; } catch (e) {}
+    // битое сохранение не затираем молча — откладываем копию (вдруг пригодится), игра начнётся заново
+    try { localStorage.setItem(SAVE_KEY + '_broken', String(raw).slice(0, 20000)); } catch (e) {}
+    return null;
   }
   function readCloud(cb) {
     if (!cloud) return cb(null);
@@ -155,7 +190,8 @@
   var state = null, lastCloud = 0;
   function save(toCloud) {
     if (!state) return;
-    state.savedAt = Date.now();
+    // время сохранения только растёт: перевод часов назад не даёт «лишнего» офлайн-дохода
+    state.savedAt = Math.max(Date.now(), state.savedAt || 0);
     var json = JSON.stringify(state);
     try { localStorage.setItem(SAVE_KEY, json); } catch (e) { /* приватный режим и т. п. */ }
     if (cloud && (toCloud || Date.now() - lastCloud > 30000) && json.length < 4000) {
@@ -204,15 +240,16 @@
   }
 
   // Окна — по одному, остальные ждут в очереди
-  var modalQueue = [], modalOpen = false;
+  var modalQueue = [], modalOpen = false, curModal = null;
   function modal(html, bind, sticky) {
     modalQueue.push({ html: html, bind: bind, sticky: !!sticky });
     if (!modalOpen) nextModal();
   }
   function nextModal() {
     var m = modalQueue.shift();
-    if (!m) { modalOpen = false; el.modal.hidden = true; el.modal.innerHTML = ''; return; }
-    modalOpen = true;
+    curModal = m || null;
+    if (!m) { modalOpen = false; el.modal.hidden = true; el.modal.innerHTML = ''; syncBack(); return; }
+    modalOpen = true; syncBack();
     el.modal.innerHTML = '<div class="sheet">' + m.html + '</div>';
     el.modal.hidden = false;
     var close = function () { nextModal(); };
@@ -234,7 +271,7 @@
   // ---------- Выбор бизнеса ----------
   function showChoose() {
     el.app.hidden = true; el.choose.hidden = false;
-    setBizAttr(null);
+    setBizAttr(null); syncBack();
     var list = $('choose-list'); list.innerHTML = '';
     BIZ_ORDER.forEach(function (type) {
       var d = BIZ[type];
@@ -485,7 +522,7 @@
     bubbleAt(c, '«' + staff(v).j + '»');
     if ((tapCd[i] || 0) > now) return;
     tapCd[i] = now + B.TAP_COOLDOWN * 1000;
-    var gain = B.cellIncome(v) * B.incomeMult(b) * B.TAP_SECONDS * (rushOn(now) ? B.RUSH_MULT : 1);
+    var gain = B.tapGain(b, v, rushOn(now));
     b.money += gain; b.earned += gain;
     floatAt(c, '+' + fmtRate(gain) + ' ₽');
     fx('tap', c, el.money);
@@ -502,7 +539,9 @@
     if (from === to || to == null || to >= g.length) return;
     var a = g[from], t = g[to];
     if (!t) {
-      g[to] = a; g[from] = 0; delete tapCd[from];
+      g[to] = a; g[from] = 0;
+      if (tapCd[from]) tapCd[to] = tapCd[from]; else delete tapCd[to];
+      delete tapCd[from];
       haptic('select');
     } else if (B.canMerge(a, t)) {
       var res = B.mergeResult(a, t, Math.random());
@@ -533,9 +572,19 @@
     modal('<div class="big-ico">' + face(b.type, v, 'av-big') + '</div><h2>Новый сотрудник: ' + esc(s.n) + '</h2>' +
       '<p>Уровень ' + lvl + ' · приносит ' + perHour(B.cellIncome(v) * B.incomeMult(b)) + (B.rar(v) ? ' · ' + RARITY[B.rar(v)].n.toLowerCase() : '') + '</p>' +
       '<div class="quote">«' + esc(s.j) + '»</div>' +
-      (lvl === B.HOLDING_UNLOCK_LEVEL ? '<p>🏗️ Ты дорос до 5-го уровня — второй бизнес холдинга появится в следующем обновлении.</p>' : '') +
-      '<div class="btns"><button class="btn btn-primary">Круто!</button></div>',
-      function (root, close) { root.querySelector('button').onclick = close; });
+      (lvl === B.HOLDING_UNLOCK_LEVEL ? '<p>🏗️ Ты дорос до 5-го уровня! Холдинг из нескольких бизнесов — в следующем обновлении, прогресс сохранится.</p>' : '') +
+      '<div class="btns"><button class="btn btn-primary" data-ok>Круто!</button>' + (lvl >= 3 ? '<button class="btn btn-ghost" data-brag>📣 Похвастаться</button>' : '') + '</div>',
+      function (root, close) {
+        root.querySelector('[data-ok]').onclick = close;
+        var br = root.querySelector('[data-brag]');
+        if (br) br.onclick = function () { brag(def().icon + ' ' + def().name + ': у меня уже ' + s.n + ' — сотрудник ' + lvl + '-го уровня 🚀 Догонишь?'); };
+      });
+  }
+  function brag(text) {
+    var N = window.GameNet;
+    haptic('light');
+    if (N && typeof N.share === 'function') { try { N.share(text); return; } catch (e) {} }
+    invite();
   }
 
   // Перетаскивание: pointer events (палец и мышь)
@@ -646,7 +695,7 @@
   }
   function showRooms() {
     var b = biz(), d = def();
-    var html = '<div class="big-ico">' + d.rooms[b.room].e + '</div><h2>Помещения</h2><p>Переезд: деньги сгорают, сотрудники едут с тобой. Каждая ступень — доход выше, иногда — новый ряд мест.</p><div class="list left">';
+    var html = '<div class="big-ico">' + d.rooms[b.room].e + '</div><h2>Помещения</h2><p>Переезд стоит денег (они уходят на ремонт), сотрудники едут с тобой. Каждая ступень — доход выше, иногда — новый ряд мест.</p><div class="list left">';
     d.rooms.forEach(function (r, i) {
       var R = B.ROOMS[i];
       html += '<div class="card ' + (i === b.room ? 'cur' : i > b.room + 1 ? 'locked' : '') + '"><div class="ico">' + r.e + '</div><div class="txt">' +
@@ -669,13 +718,17 @@
   }
   function moveRoom(idx) {
     var b = biz(), R = B.ROOMS[idx], r = def().rooms[idx];
-    b.money = 0; b.room = idx;
+    if (b.room !== idx - 1 || b.money < R.needMoney) return;
+    b.money -= R.needMoney; b.room = idx;
     while (b.grid.length < B.cellCount(idx, extra())) b.grid.push(0);
     tapCd = {};
     buildGrid(); updateUi(true); save(true);
     haptic('success');
     modal('<div class="big-ico">' + r.e + '</div><h2>Переезд: ' + esc(r.n) + '!</h2><p>Теперь ' + B.cellCount(idx, extra()) + ' мест и доход ' + mult(R.mult) + '. Команда уже раскладывает вещи.</p>' +
-      '<div class="btns"><button class="btn btn-primary">Работаем!</button></div>', function (root, close) { root.querySelector('button').onclick = close; });
+      '<div class="btns"><button class="btn btn-primary" data-ok>Работаем!</button><button class="btn btn-ghost" data-brag>📣 Похвастаться</button></div>', function (root, close) {
+        root.querySelector('[data-ok]').onclick = close;
+        root.querySelector('[data-brag]').onclick = function () { brag('Мой бизнес (' + def().icon + ' ' + def().name + ') переехал: ' + r.e + ' ' + r.n + ', доход ' + mult(R.mult) + '! А ты где? 🚀'); };
+      });
   }
 
   // ---------- Улучшения ----------
@@ -779,6 +832,7 @@
     if (id === 'free') {
       if (state.agency.freeAt > now) { toast('Следующая бесплатная — через ' + fmtDur((state.agency.freeAt - now) / 1000)); haptic('error'); return; }
       state.agency.freeAt = now + B.PACKS.free.cooldownH * HOUR;
+      state.guide = Math.max(state.guide || 0, 2);
       openPack('free');
     } else if (id === 'standard') {
       var pr = B.packPrice(biz());
@@ -831,7 +885,7 @@
   function dayNum(key) { var p = key.split('-').map(Number); return Math.round(Date.UTC(p[0], p[1] - 1, p[2]) / 86400000); }
   function dailyState() {
     var today = dayKey(), dl = state.daily;
-    if (dl.last === today) return { claimed: true, streak: dl.streak };
+    if (dl.last === today || (dl.last && dayNum(today) < dayNum(dl.last))) return { claimed: true, streak: dl.streak }; // часы перевели назад — награду уже забрали
     var cont = dl.last && dayNum(today) - dayNum(dl.last) === 1;
     return { claimed: false, streak: cont ? dl.streak + 1 : 1, lost: !!dl.last && !cont && dl.streak > 1 };
   }
@@ -869,6 +923,7 @@
         var d2 = dailyState();
         if (d2.claimed) return close();
         state.daily = { last: dayKey(), streak: d2.streak };
+        state.guide = Math.max(state.guide || 0, 1);
         close();
         giveCalendar(B.CALENDAR[calDay(d2.streak)]);
         haptic('success'); updateUi(true); save(true);
@@ -889,8 +944,10 @@
   // ---------- Задания дня ----------
   function ensureQuests() {
     var today = dayKey(), q = state.quests;
-    if (q.day === today) return q;
-    var seed = dayNum(today), pool = B.QUESTS.slice(), list = [];
+    if (q.day === today || (q.day && dayNum(today) < dayNum(q.day))) return q; // часы назад — задания не обновляем
+    var now = Date.now(), seed = dayNum(today), list = [];
+    // только выполнимые сегодня (найм дорожает — со временем «найми 15» уже не по карману)
+    var pool = B.QUESTS.map(function (x) { return { id: x.id, need: B.questNeed(x.id, biz(), now) }; }).filter(function (x) { return x.need > 0; });
     while (list.length < B.QUEST_COUNT && pool.length) {
       seed = (seed * 9301 + 49297) % 233280;
       var x = pool.splice(seed % pool.length, 1)[0];
@@ -907,6 +964,7 @@
   }
   function questReward() { return B.minutesIncome(biz(), B.QUEST_REWARD_MIN, B.QUEST_REWARD_FLOOR); }
   function showQuests() {
+    if ((state.guide || 0) < 3) { state.guide = 3; save(); }
     var q = ensureQuests(), r = questReward(), all = q.list.every(function (x) { return x.claimed; });
     var html = '<div class="big-ico">📋</div><h2>Задания дня</h2><p>Каждый день — три новых. За каждое — ' + rub(r) + ', за все три — сундук.</p><div class="list left">';
     q.list.forEach(function (x, k) {
@@ -915,7 +973,7 @@
         '<div class="qbar"><i style="width:' + Math.round(x.have / x.need * 100) + '%"></i></div><div class="d">' + x.have + ' / ' + x.need + '</div></div>' +
         (x.claimed ? '<button class="buy max">✓</button>' : '<button class="buy ' + (done ? 'glow' : 'poor') + '" data-q="' + k + '">' + (done ? 'Забрать' : rub(r)) + '</button>') + '</div>';
     });
-    html += '<div class="card chest' + (q.chest ? ' cur' : '') + '"><div class="ico">🧰</div><div class="txt"><div class="t">Сундук за все три</div><div class="d">📁 пачка «Стандарт» + 🧩 1 осколок</div></div>' +
+    html += '<div class="card chest' + (q.chest ? ' cur' : '') + '"><div class="ico">🧰</div><div class="txt"><div class="t">Сундук за все три</div><div class="d">' + C.PACKS[B.CHEST_PACK].e + ' ' + B.PACKS[B.CHEST_PACK].count + ' резюме + 🧩 1 осколок</div></div>' +
       (q.chest ? '<button class="buy max">✓</button>' : '<button class="buy ' + (all ? 'glow' : 'poor') + '" data-chest>' + (all ? 'Открыть' : '🔒') + '</button>') + '</div>';
     html += '</div><div class="btns" style="margin-top:14px"><button class="btn btn-dark" data-close>Закрыть</button></div>';
     modal(html, function (root, close) {
@@ -923,6 +981,7 @@
       root.querySelectorAll('[data-q]').forEach(function (bt) {
         bt.onclick = function () {
           var x = state.quests.list[Number(bt.dataset.q)];
+          if (!x || x.claimed) return;
           if (x.have < x.need) { toast('Ещё ' + (x.need - x.have) + ' — и награда твоя'); return; }
           x.claimed = true;
           var rr = questReward(); biz().money += rr; biz().earned += rr;
@@ -931,9 +990,10 @@
       });
       var ch = root.querySelector('[data-chest]');
       if (ch) ch.onclick = function () {
+        if (state.quests.chest) return;
         if (!state.quests.list.every(function (x) { return x.claimed; })) { toast('Сначала забери все три задания'); return; }
         state.quests.chest = true; close();
-        addShards(1); openPack('standard'); save();
+        addShards(1); questProgress('pack'); reveal(B.rollPack(B.CHEST_PACK, Math.random), '🧰 Сундук за задания', B.CHEST_PACK); save(true);
       };
     });
   }
@@ -974,7 +1034,8 @@
   function tutorial() {
     var t = el.tutor;
     el.hire.classList.remove('glow');
-    if (state.tutorial >= 3 || !state.businesses.length) { t.hidden = true; t.innerHTML = ''; return; }
+    if (!state.businesses.length) { t.hidden = true; t.innerHTML = ''; guideKey = ''; return; }
+    if (state.tutorial >= 3) { guideKey = '-'; return guide(); }
     t.hidden = false;
     var step = state.tutorial, text, html, r;
     if (step < 2) {
@@ -996,6 +1057,34 @@
       styleArrow(t.firstChild, ra.left + ra.width / 2 - t.firstChild.getBoundingClientRect().left);
     }
   }
+  // После обучения — ещё три подсказки, по одной: подарок дня → бесплатная пачка → задания дня (state.guide 0..3)
+  var guideKey = '';
+  function guideStep() {
+    if (!state || state.tutorial < 3 || !state.businesses.length || el.app.hidden || activeView !== 'office' || modalOpen || drag) return null;
+    if ((state.guide || 0) < 1) { if (!dailyState().claimed) return 'daily'; state.guide = 1; }
+    if (state.guide < 2) { if (state.agency.freeAt <= Date.now()) return 'pack'; state.guide = 2; }
+    if (state.guide < 3) return 'quests';
+    return null;
+  }
+  function guide() {
+    var t = el.tutor, step = guideStep(), key = step ? step + ':' + window.innerWidth + 'x' + window.innerHeight : '';
+    if (key === guideKey) return;
+    guideKey = key;
+    [el.daily, el.quests, document.querySelector('.tab[data-view="shop"]')].forEach(function (x) { if (x) x.classList.remove('guide-glow'); });
+    if (!step) { t.hidden = true; t.innerHTML = ''; return; }
+    var G = {
+      daily: [el.daily, 4, '🎁 Забери подарок дня — хватит на несколько наймов'],
+      pack: [document.querySelector('.tab[data-view="shop"]'), 5, '🗂️ В агентстве ждёт бесплатная пачка резюме'],
+      quests: [el.quests, 6, '📋 Задания дня: за каждое — деньги, за все три — сундук']
+    }[step];
+    var r = G[0].getBoundingClientRect(), below = r.top < window.innerHeight / 2;
+    G[0].classList.add('guide-glow');
+    t.hidden = false;
+    t.innerHTML = '<div class="tip ' + (below ? 'up' : 'down') + '"><span class="n">' + G[1] + '</span>' + G[2] + '</div>';
+    var tip = t.firstChild;
+    tip.style.top = (below ? r.bottom + 16 : r.top - tip.offsetHeight - 16) + 'px';
+    styleArrow(tip, r.left + r.width / 2 - tip.getBoundingClientRect().left);
+  }
   function styleArrow(tip, x) {
     var id = 'tip-arrow-style', st = document.getElementById(id);
     if (!st) { st = document.createElement('style'); st.id = id; document.head.appendChild(st); }
@@ -1010,9 +1099,10 @@
   }
   function stepIcon(need) { var d = stepDef(need); return d ? d.e : '🎁'; }
   function stepLabel(r) { var d = stepDef(r.need); return d ? d.s : String(r.title || '').replace(/^[^0-9A-Za-zА-Яа-яЁё«]+/, ''); }
+  // Приглашение: ссылка t.me/startup_zero_bot?startapp=ref_<id> — работает и без сервера (id берём из Telegram)
   function invite() {
-    var N = net();
-    if (N && typeof N.invite === 'function') { try { N.invite(); return; } catch (e) {} }
+    var N = window.GameNet;
+    if (N && typeof N.invite === 'function') { try { N.invite(); haptic('light'); return; } catch (e) {} }
     var url = 'https://t.me/share/url?url=' + encodeURIComponent('https://t.me/startup_zero_bot') +
       '&text=' + encodeURIComponent('Строю бизнес с нуля 🚀 Заходи — обгони меня!');
     if (inTg) { try { tg.openTelegramLink(url); return; } catch (e) {} }
@@ -1069,6 +1159,7 @@
       }).join('');
       box.innerHTML = head + '<div class="card col"><div class="t">Приглашено: <span class="acc">' + invited + '</span></div>' + ladderHtml(invited, rewards, true) + '</div>' +
         '<button class="btn btn-primary btn-wide" data-invite>📨 Пригласить друга</button>' +
+        (data.need ? '<p class="muted-c">Друг засчитывается, когда поиграет ' + (data.need.minutes || 10) + ' мин и оценка его компании дорастёт до ' + rub(data.need.valuation || 0) + '.</p>' : '') +
         '<h3 class="sub-title">Твои друзья</h3>' + (list ? '<div class="list">' + list + '</div>' : '<p class="muted-c">Пока никого. Отправь ссылку — друг появится здесь, когда откроет игру.</p>');
       updateUi(true);
     }).catch(function () {
@@ -1145,7 +1236,7 @@
     var N = net(); if (!N || !state || !state.businesses.length || typeof N.sync !== 'function') return;
     lastSync = Date.now();
     try {
-      var p = N.sync({ valuation: myValuation(), business: biz().type, maxLevel: B.maxLevel(biz()), incomePerSec: Math.round(income() * 100) / 100 });
+      var p = N.sync({ valuation: myValuation(), earned: Math.round(biz().earned || 0), business: biz().type, maxLevel: B.maxLevel(biz()), incomePerSec: Math.round(B.incomePerSec(biz(), Date.now()) * 100) / 100 });
       if (p && p.catch) p.catch(function () {});
     } catch (e) {}
   }
@@ -1240,6 +1331,7 @@
     else if (inbox) hint = '🪑 В приёмной ждут — нажми «Из приёмной»';
     else hint = 'Тапни по сотруднику — +' + B.TAP_SECONDS + ' сек его дохода';
     if (el.hint.textContent !== hint) el.hint.textContent = hint;
+    if (state.tutorial >= 3) guide();
     if (force && activeView === 'upgrades') renderUpgrades();
     if (activeView === 'shop' && (force || now - lastAgency > 1000)) { lastAgency = now; renderAgency(); }
   }
@@ -1266,6 +1358,7 @@
     if (v === 'friends') renderFriends();
     if (v === 'shop') renderAgency();
     if (v === 'office') requestAnimationFrame(fitGrid);
+    syncBack();
     haptic('select');
   }
 
@@ -1360,8 +1453,9 @@
           close();
           try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
           if (cloud) { try { cloud.removeItem(CLOUD_KEY, function () {}); } catch (e) {} }
-          var keepNet = state.net; // друзья и полученные награды живут на сервере — не сбрасываем
-          state = freshState(); state.net = keepNet; tapCd = {};
+          // друзья и награды живут на сервере, доп. места и стили — «навсегда»: их не сбрасываем
+          var keep = { net: state.net, slots: state.slots, skin: state.skin, skinsBought: state.skinsBought, guide: state.guide };
+          state = freshState(); Object.keys(keep).forEach(function (k) { state[k] = keep[k]; }); tapCd = {};
           el.tutor.hidden = true;
           save(true);
           showChoose();

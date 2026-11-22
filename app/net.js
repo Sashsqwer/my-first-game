@@ -7,6 +7,7 @@
 
   var DEFAULT_API = 'https://tw.nightflo.ru/bots/game-api.php';
   var BOT = 'startup_zero_bot';
+  var REF_BONUS = 500;             // как Game::REF_BONUS на сервере
   var TIMEOUT_MS = 8000;
   var SYNC_EVERY_MS = 20000;       // сервер принимает не чаще раза в 15 с
   var STEPS = [
@@ -116,12 +117,22 @@
     ready: function () { return ok; },
     user: function () { return me ? { id: me.id, name: me.name } : null; },
 
+    /* Ссылка-приглашение. id — с сервера, а пока его нет — из Telegram (initDataUnsafe), так ссылка рабочая и без сервера */
+    link: function () {
+      var id = me ? me.id : 0;
+      if (!id) { try { id = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || 0; } catch (e) {} }
+      return 'https://t.me/' + BOT + (/^\d{1,19}$/.test(String(id)) && id ? '?startapp=ref_' + id : '');
+    },
+
+    /* Поделиться: окно «Переслать» Telegram (вне Telegram — новая вкладка). text — свой текст (для «Похвастаться») */
+    share: function (text) {
+      var url = 'https://t.me/share/url?url=' + encodeURIComponent(GameNet.link()) + '&text=' + encodeURIComponent(text);
+      if (tg && tg.initData && tg.openTelegramLink) { try { tg.openTelegramLink(url); return; } catch (e) {} }
+      try { root.open(url, '_blank', 'noopener'); } catch (e) {}
+    },
+
     invite: function () {
-      var link = 'https://t.me/' + BOT + (me ? '?startapp=ref_' + me.id : '');
-      var text = 'Строю стартап с нуля 🚀 Заходи по моей ссылке — получишь +500 ₽ на старт, а я награду. Обгони меня!';
-      var url = 'https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent(text);
-      if (tg && tg.openTelegramLink) { try { tg.openTelegramLink(url); return; } catch (e) {} }
-      try { root.open(url, '_blank'); } catch (e) {}
+      GameNet.share('Строю стартап с нуля 🚀 Заходи по моей ссылке — получишь +' + REF_BONUS + ' ₽ на старт, а я награду. Обгони меня!');
     },
 
     friends: function () {
@@ -156,7 +167,8 @@
         valuation: +state.valuation || 0,
         business: String(state.business || ''),
         maxLevel: +state.maxLevel || 0,
-        incomePerSec: +state.incomePerSec || 0
+        incomePerSec: +state.incomePerSec || 0,
+        earned: +state.earned || 0
       };
       if (!initData) return Promise.resolve();
       var wait = SYNC_EVERY_MS - (Date.now() - lastSync);
