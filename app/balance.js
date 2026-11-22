@@ -27,6 +27,12 @@
       { rows: 5, mult: 10, needLevel: 7, needMoney: 1800000 }
     ],
 
+    // Дополнительные места в помещении (сверх 4×N): общие для всех бизнесов игрока
+    SLOT_FRIENDS: [1, 3, 10],  // +1 место за 1, за 3 и за 10 засчитанных друзей (до +3)
+    SLOT_STARS: [50, 100],     // +1 место за ⭐ 50 и ещё +1 за ⭐ 100 (оплата — позже, пока «скоро»)
+    SLOT_STREAK_DAYS: 7,       // +1 место за 7 дней подряд в календаре наград
+    SLOT_MAX: 6,
+
     // Улучшения
     UPGRADES: {
       boost:  { base: 150,  growth: 2.2, max: 25 },  // +10% дохода за уровень
@@ -195,6 +201,21 @@
     return Math.round(Math.max(floor || 0, B.incomePerSec(biz, now) * 60 * minutes));
   };
 
+  // ---------- Дополнительные места ----------
+  // slots — { friends: 0..3, stars: 0..2, streak: true/false } (state.slots)
+  B.friendSlots = function (counted) {
+    var n = 0;
+    for (var i = 0; i < B.SLOT_FRIENDS.length; i++) if ((counted || 0) >= B.SLOT_FRIENDS[i]) n++;
+    return n;
+  };
+  B.extraSlots = function (slots) {
+    if (!slots) return 0;
+    return Math.min(B.SLOT_MAX, (slots.friends || 0) + (slots.stars || 0) + (slots.streak ? 1 : 0));
+  };
+  B.cellCount = function (room, extra) {
+    return B.COLS * (B.ROOMS[room] || B.ROOMS[0]).rows + (extra || 0);
+  };
+
   B.maxLevel = function (biz) {
     var m = 0;
     for (var i = 0; i < biz.grid.length; i++) { var l = B.lvl(biz.grid[i]); if (l > m) m = l; }
@@ -206,7 +227,7 @@
     return Math.round((biz.earned || 0) + B.incomePerSec(biz, now) * 86400);
   };
 
-  B.newBusiness = function (type, now) {
+  B.newBusiness = function (type, now, extra) {
     if (now == null) now = Date.now();
     return {
       type: type,
@@ -215,7 +236,7 @@
       room: 0,
       hires: 0,
       merges: 0,
-      grid: new Array(B.COLS * B.ROOMS[0].rows).fill(0),
+      grid: new Array(B.cellCount(0, extra)).fill(0),
       upgrades: { boost: 0, chairs: 0, pr: 0 },
       needs: [now, now, now],
       inbox: [],
