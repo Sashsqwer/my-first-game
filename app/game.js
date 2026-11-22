@@ -7,6 +7,10 @@
   var CLOUD_KEY = 'save_v1';
   var VERSION = 3; // 3 — 8 ступеней офиса и доход в ₽/час (сохранения v1/v2 переводятся в normalize)
   var HOUR = 3600000, MIN = 60000;
+  var GAME_VER = '0.5';
+  // «Что нового» — показываем один раз тем, кто играл в прошлой версии (новичкам — нет)
+  var NEWS = ['🎁 После обучения подскажем, где подарок дня, бесплатная пачка и задания', '📋 Задания дня теперь всегда выполнимы — подстраиваются под твой доход',
+    '🧰 Сундук за все три задания — пачка резюме и осколок', '📣 Новый сотрудник или переезд — можно похвастаться друзьям', '🏢 Переезд списывает только свою цену, остальные деньги остаются'];
 
   // ---------- Telegram ----------
   var tg = window.Telegram && window.Telegram.WebApp;
@@ -103,7 +107,7 @@
       rush: { until: 0, readyAt: 0 },
       net: { invited: 0, counted: 0, claimed: [], refBonus: false },
       slots: { friends: 0, stars: 0, streak: false },
-      skin: 'mix', skinsBought: []
+      skin: 'mix', skinsBought: [], news: GAME_VER, guide: 0
     };
   }
   function valid(s) {
@@ -114,6 +118,7 @@
   // Миграция и починка: старые сохранения (v1) — без редкости, потребностей, агентства
   function normalize(s) {
     var now = Date.now();
+    var hadGuide = s.guide != null;
     s.tutorial = num(s.tutorial, 0, 3); s.guide = num(s.guide, 0, 9);
     s.daily = obj(s.daily) || { last: null, streak: 0 };
     if (typeof s.daily.last !== 'string' || !/^\d{4}-\d{1,2}-\d{1,2}$/.test(s.daily.last)) s.daily.last = null;
@@ -155,6 +160,7 @@
       b.money = num(b.money, 0, 1e30); b.earned = num(b.earned, 0, 1e30);
     });
     if (!(s.active >= 0 && s.active < s.businesses.length)) s.active = 0;
+    if (!hadGuide && s.businesses.some(function (b) { return b.hires >= 20; })) s.guide = 3; // опытным — без подсказок
     s.v = VERSION;
     fixClock(s, now);
     return s;
@@ -912,12 +918,10 @@
       html += '<p>Сегодня уже забрал ✅<br>Завтра: ' + nx.big + '</p><div class="btns"><button class="btn btn-dark" data-close>Ок</button></div>';
     } else {
       html += (ds.lost ? '<p>Серия прервалась — начинаем с 1-го дня.</p>' : '') +
-        '<div class="amount">' + calInfo(cur).big + '</div><div class="btns"><button class="btn btn-primary" data-claim>Забрать</button>' +
-        '<button class="btn btn-ghost" data-ad>📺 ×2 за рекламу · скоро</button></div>';
+        '<div class="amount">' + calInfo(cur).big + '</div><div class="btns"><button class="btn btn-primary" data-claim>Забрать</button></div>';
     }
     modal(html, function (root, close) {
       var c = root.querySelector('[data-close]'); if (c) c.onclick = close;
-      var ad = root.querySelector('[data-ad]'); if (ad) ad.onclick = function () { toast('Реклама за награду появится позже'); };
       var cl = root.querySelector('[data-claim]');
       if (cl) cl.onclick = function () {
         var d2 = dailyState();
@@ -1002,7 +1006,7 @@
   function rushClick() {
     var now = Date.now(), r = state.rush;
     if (now < r.until) { toast('⚡ Аврал идёт: ещё ' + fmtClock((r.until - now) / 1000)); return; }
-    if (now < r.readyAt) { toast('⚡ Команда отдыхает после аврала. Снова — через ' + fmtDur((r.readyAt - now) / 1000) + ' (скоро — сразу за рекламу)'); haptic('error'); return; }
+    if (now < r.readyAt) { toast('⚡ Команда отдыхает после аврала. Снова — через ' + fmtDur((r.readyAt - now) / 1000) + ''); haptic('error'); return; }
     if (state.tutorial < 3) { toast('Сначала закончи обучение'); return; }
     state.rush = { until: now + B.RUSH_MIN * MIN, readyAt: now + B.RUSH_COOLDOWN_H * HOUR };
     haptic('success'); toast('⚡ Аврал! Доход ×' + B.RUSH_MULT + ' на ' + B.RUSH_MIN + ' минут');
@@ -1019,9 +1023,8 @@
     modal('<div class="big-ico">💼</div><h2>Пока тебя не было</h2>' +
       '<p>Команда работала ' + fmtDur(t) + (sec > cap ? ' (больше не влезло — лимит ' + fmtDur(cap) + ', прокачай «' + esc(def().upg.chairs.n) + '»)' : '') + '</p>' +
       (lost >= 1 ? '<p class="warn">😩 Команда устала — доход был ниже на ' + lost + '%. Позаботься о ней: ' + def().needs.map(function (n) { return n.e; }).join(' ') + ' над сеткой.</p>' : '') +
-      '<div class="amount">+' + rub(gain) + '</div><div class="btns"><button class="btn btn-primary" data-take>Забрать</button><button class="btn btn-ghost" data-ad>📺 ×2 за рекламу · скоро</button></div>',
+      '<div class="amount">+' + rub(gain) + '</div><div class="btns"><button class="btn btn-primary" data-take>Забрать</button></div>',
       function (root, close) {
-        root.querySelector('[data-ad]').onclick = function () { toast('Реклама за награду появится позже'); };
         root.querySelector('[data-take]').onclick = function () {
           biz().money += gain; biz().earned += gain;
           haptic('success'); close(); updateUi(true); save(true);
@@ -1329,7 +1332,7 @@
     else if (full && !hasPair()) hint = next ? 'Мест нет и пар нет — копи на переезд' : 'Мест нет — объединяй, когда появятся пары';
     else if (hasPair()) hint = 'Перетащи одинаковых друг на друга — уровень выше';
     else if (inbox) hint = '🪑 В приёмной ждут — нажми «Из приёмной»';
-    else hint = 'Тапни по сотруднику — +' + B.TAP_SECONDS + ' сек его дохода';
+    else hint = 'Тапай по сотрудникам — монетки сразу';
     if (el.hint.textContent !== hint) el.hint.textContent = hint;
     if (state.tutorial >= 3) guide();
     if (force && activeView === 'upgrades') renderUpgrades();
@@ -1381,7 +1384,7 @@
       '<p>' + d.icon + ' ' + d.name + ' · ' + d.rooms[b.room].n + '<br>Наймов: ' + b.hires + ' · объединений: ' + b.merges + '<br>Сохранение: на этом устройстве' + (cloud ? ' и в облаке Telegram' : '') + (net() ? '<br>Сервер: подключён ✅' : '') + '</p>' +
       skinsCard() + staffPicker() +
       '<div class="btns"><button class="btn btn-dark" data-close>Закрыть</button><button class="btn btn-ghost" data-reset>Сбросить прогресс</button></div>' +
-      '<p style="margin:12px 0 0;font-size:12px;color:var(--dim)">Стартап с нуля · версия 0.3</p>',
+      '<p style="margin:12px 0 0;font-size:12px;color:var(--dim)">Стартап с нуля · версия ' + GAME_VER + '</p>',
       function (root, close) {
         root.querySelector('[data-close]').onclick = close;
         root.querySelector('[data-reset]').onclick = function () { close(); confirmReset(); };
@@ -1518,6 +1521,14 @@
     requestAnimationFrame(function () { fitGrid(); tutorial(); });
   }
 
+  function whatsNew() {
+    modal('<div class="big-ico">✨</div><h2>Что нового · ' + GAME_VER + '</h2><div class="list left news">' +
+      NEWS.map(function (t) { return '<div class="card"><div class="txt"><div class="d">' + esc(t) + '</div></div></div>'; }).join('') +
+      '</div><div class="btns" style="margin-top:14px"><button class="btn btn-primary" data-close>Понятно</button></div>', function (root, close) {
+        root.querySelector('[data-close]').onclick = function () { close(); save(); };
+      });
+  }
+
   // ---------- Старт ----------
   function boot(loaded) {
     state = loaded ? normalize(loaded) : freshState();
@@ -1527,6 +1538,7 @@
       var away = (Date.now() - state.savedAt) / 1000;
       showGame();
       if (away >= B.OFFLINE_MIN_SEC) offline(away, state.savedAt);
+      if (state.news !== GAME_VER) { state.news = GAME_VER; whatsNew(); }
     }
     hookReferral();
     setTimeout(refreshFriendSlots, 1500); // друзья → доп. места (если сервер уже на связи)

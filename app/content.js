@@ -263,13 +263,14 @@
     star: { e: '🌟', n: 'Звёздная', d: 'Только эпические и легендарные' }
   };
 
+  function pl(n, a, b, c) { n = Math.abs(n) % 100; var m = n % 10; if (n > 10 && n < 20) return c; if (m > 1 && m < 5) return b; if (m === 1) return a; return c; }
   var QUESTS = {
-    merge: { e: '🔀', n: function (k) { return 'Объедини сотрудников ' + k + ' раз'; } },
-    hire: { e: '➕', n: function (k) { return 'Найми ' + k + ' сотрудников'; } },
-    care: { e: '☕', n: function (k) { return 'Позаботься о команде ' + k + ' раза'; } },
-    tap: { e: '👆', n: function (k) { return 'Тапни по сотрудникам ' + k + ' раз'; } },
+    merge: { e: '🔀', n: function (k) { return 'Объедини сотрудников ' + k + ' ' + pl(k, 'раз', 'раза', 'раз'); } },
+    hire: { e: '➕', n: function (k) { return 'Найми ' + k + ' ' + pl(k, 'сотрудника', 'сотрудников', 'сотрудников'); } },
+    care: { e: '☕', n: function (k) { return 'Позаботься о команде ' + k + ' ' + pl(k, 'раз', 'раза', 'раз'); } },
+    tap: { e: '👆', n: function (k) { return 'Тапни по сотрудникам ' + k + ' ' + pl(k, 'раз', 'раза', 'раз'); } },
     pack: { e: '📄', n: function () { return 'Открой пачку резюме'; } },
-    upgrade: { e: '🚀', n: function (k) { return 'Купи ' + k + ' улучшения'; } }
+    upgrade: { e: '🚀', n: function (k) { return 'Купи ' + k + ' ' + pl(k, 'улучшение', 'улучшения', 'улучшений'); } }
   };
 
   // Награды за друзей — как на сервере (alex-bots, game-api.php). s — короткая подпись для лесенки
