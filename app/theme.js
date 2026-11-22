@@ -1,21 +1,22 @@
 /* «Стартап с нуля» — пробные оформления (A «Неоновая сцена», B «Премиум-золото», C «Кибер-комикс», D «Диорама», E «Настолка»,
-   F «Пиксель-арт», G «Пластилин», H «Манга», I «Офис-95», J «Стеклянный город»).
-   Выбор: ?theme=a…j (или ?theme=old — вернуть старое), запоминается в localStorage. По умолчанию — старая тема.
-   Стили: A–C — themes.css, D–E — themes2.css, F–J — themes3.css.
+   F «Пиксель-арт», G «Пластилин», H «Манга», I «Офис-95», J «Стеклянный город», K «Полночь», L «Нуар-казино», M «Ночной Токио»).
+   Выбор: ?theme=a…m (или ?theme=old — вернуть старое), запоминается в localStorage. По умолчанию — старая тема.
+   Стили: A–C — themes.css, D–E — themes2.css, F–J — themes3.css, K–M — themes4.css.
    Здесь: выбор темы, сцена-фон, свои SVG-иконки меню и шапки, эффекты (window.GameFx: монеты, вспышки, частицы).
    Подключается в <head> без defer — чтобы тема встала до первой отрисовки. Стили — themes.css. */
 (function () {
   'use strict';
   var KEY = 'startup_zero_theme';
   var LIST = [{ id: 'old', n: 'Сейчас' }, { id: 'a', n: 'A' }, { id: 'b', n: 'B' }, { id: 'c', n: 'C' }, { id: 'd', n: 'D' }, { id: 'e', n: 'E' },
-    { id: 'f', n: 'F' }, { id: 'g', n: 'G' }, { id: 'h', n: 'H' }, { id: 'i', n: 'I' }, { id: 'j', n: 'J' }];
-  var BG = { a: '#07090f', b: '#0d0a12', c: '#120a2a', d: '#0b1030', e: '#3a2417', f: '#1a1c2c', g: '#f3e3d3', h: '#f7f5f0', i: '#008080', j: '#1b2a55', old: '#0D0F14' };
+    { id: 'f', n: 'F' }, { id: 'g', n: 'G' }, { id: 'h', n: 'H' }, { id: 'i', n: 'I' }, { id: 'j', n: 'J' },
+    { id: 'k', n: 'K' }, { id: 'l', n: 'L' }, { id: 'm', n: 'M' }];
+  var BG = { a: '#07090f', b: '#0d0a12', c: '#120a2a', d: '#0b1030', e: '#3a2417', f: '#1a1c2c', g: '#f3e3d3', h: '#f7f5f0', i: '#008080', j: '#1b2a55', k: '#07090f', l: '#14080c', m: '#090a18', old: '#0D0F14' };
   // J: небо по реальному часу — утро / день / вечер / ночь (цвет шапки Telegram — верх неба)
   var SKY = { dawn: '#f4a98a', day: '#4b9be0', dusk: '#3a2d6b', night: '#0b1433' };
   function skyNow() { var h = new Date().getHours(); return h >= 5 && h < 10 ? 'dawn' : h >= 10 && h < 17 ? 'day' : h >= 17 && h < 21 ? 'dusk' : 'night'; }
   var root = document.documentElement;
 
-  function valid(t) { return typeof t === 'string' && /^[a-j]$/.test(t); }
+  function valid(t) { return typeof t === 'string' && /^[a-m]$/.test(t); }
   function read() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
   function write(t) { try { if (valid(t)) localStorage.setItem(KEY, t); else localStorage.removeItem(KEY); } catch (e) {} }
 
@@ -117,6 +118,16 @@
     if (theme === 'j') return '<div class="sc-x"><i class="sun"></i><i class="cl c1"></i><i class="cl c2"></i><i class="cl c3"></i>' +
       '<svg class="sky-far" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice">' + cityRects(11, 400, 0, 50, 130, false, 'bf') + '</svg>' +
       '<svg class="sky-near" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice">' + cityRects(5, 400, 0, 26, 92, true, 'bn') + '</svg></div>';
+    if (theme === 'k') return '<div class="sc-x"><i class="ka1"></i><i class="ka2"></i>' +
+      '<svg class="k-lines" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="kgl" x1="0" y1="0" x2="1" y2="0">' +
+      '<stop offset="0" class="ks0"/><stop offset=".55" class="ks1"/><stop offset="1" class="ks0"/></linearGradient></defs>' +
+      '<path d="M-30 190 C 110 90, 250 300, 430 150"/><path class="kl2" d="M-30 250 C 140 170, 230 330, 430 230"/><path d="M-30 690 C 130 600, 260 780, 430 640"/></svg></div>';
+    if (theme === 'l') return '<div class="sc-x"><i class="vel"></i><i class="lamp lp1"><b></b></i><i class="lamp lp2"><b></b></i><i class="wain"></i></div>';
+    if (theme === 'm') return '<div class="sc-x"><i class="fog"></i>' +
+      '<svg class="m-far" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice">' + cityRects(31, 400, 0, 70, 180, true, 'mf') + '</svg>' +
+      '<svg class="m-near" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice">' + cityRects(17, 400, 0, 40, 120, true, 'mn') + '</svg>' +
+      '<i class="sg sg1"></i><i class="sg sg2"></i><i class="sg sg3"></i><i class="sg sgb"></i><i class="street"></i><i class="refl"></i>' +
+      '<i class="rain r1"></i><i class="rain r2"></i></div>';
     return '';
   }
   function sceneSync() {
@@ -305,9 +316,42 @@
       ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.ellipse(x - r * 0.3 * sq, y - r * 0.35, r * 0.22 * Math.max(0.3, sq), r * 0.4, 0.5, 0, 6.283); ctx.fill();
       return;
     }
+    if (theme === 'k') {
+      // K: светящаяся точка с ореолом и тонким кольцом
+      var kg = ctx.createRadialGradient(x, y, 0, x, y, r * 2.6);
+      kg.addColorStop(0, 'rgba(255,236,190,.55)'); kg.addColorStop(1, 'rgba(255,236,190,0)');
+      ctx.fillStyle = kg; ctx.beginPath(); ctx.arc(x, y, r * 2.6, 0, 6.283); ctx.fill();
+      ctx.strokeStyle = '#F3D98B'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(x, y, r * Math.max(0.2, sq), r, 0, 0, 6.283); ctx.stroke();
+      ctx.fillStyle = '#FFF6DE'; ctx.beginPath(); ctx.arc(x, y, r * 0.32, 0, 6.283); ctx.fill();
+      return;
+    }
+    if (theme === 'l') return chipDraw(x, y, r * 1.15, sq, cssVar('--biz', '#B8324A'));
+    if (theme === 'm') {
+      // M: неоновая монета со следом-шлейфом
+      var mb = cssVar('--biz', '#45E0D8');
+      if (p.lx != null) { ctx.strokeStyle = mb; ctx.globalAlpha *= 0.5; ctx.lineWidth = r * 0.9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(p.lx, p.ly); ctx.lineTo(x, y); ctx.stroke(); ctx.globalAlpha /= 0.5; }
+      p.lx = x; p.ly = y;
+      ctx.fillStyle = 'rgba(255,214,120,.25)'; ctx.beginPath(); ctx.arc(x, y, r * 1.9, 0, 6.283); ctx.fill();
+      ctx.fillStyle = '#ffd98a'; ctx.beginPath(); ctx.ellipse(x, y, r * Math.max(0.25, sq), r, 0, 0, 6.283); ctx.fill();
+      ctx.strokeStyle = '#fff4d0'; ctx.lineWidth = 1; ctx.stroke();
+      return;
+    }
     ctx.fillStyle = '#B9771A'; ctx.beginPath(); ctx.ellipse(x, y + 1.2, r * Math.max(0.25, sq), r, 0, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#FFD25A'; ctx.beginPath(); ctx.ellipse(x, y, r * Math.max(0.25, sq), r, 0, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#FFF3C4'; ctx.beginPath(); ctx.ellipse(x - r * 0.3 * sq, y - r * 0.3, r * 0.28 * Math.max(0.3, sq), r * 0.28, 0, 0, 6.283); ctx.fill();
+  }
+  // L: фишка казино (вид сверху, сжатая по вращению): цветной край с белыми вставками, кант, центр
+  function chipDraw(x, y, r, sq, col) {
+    var w = r * Math.max(0.22, sq);
+    ctx.save(); ctx.translate(x, y); ctx.scale(w / r, 1);
+    ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.beginPath(); ctx.arc(0, r * 0.18, r, 0, 6.283); ctx.fill();
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#f3e7cf';
+    for (var i = 0; i < 6; i++) { var a = i / 6 * 6.283; ctx.beginPath(); ctx.arc(0, 0, r, a - 0.18, a + 0.18); ctx.arc(0, 0, r * 0.72, a + 0.18, a - 0.18, true); ctx.fill(); }
+    ctx.strokeStyle = 'rgba(243,231,207,.85)'; ctx.lineWidth = Math.max(0.8, r * 0.08); ctx.setLineDash([r * 0.22, r * 0.18]);
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.6, 0, 6.283); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.arc(-r * 0.25, -r * 0.3, r * 0.35, 0, 6.283); ctx.fill();
+    ctx.restore();
   }
   function loop() {
     if (!parts.length) { running = false; ctx.clearRect(0, 0, cv.width, cv.height); return; }
@@ -326,7 +370,8 @@
       ctx.globalAlpha = p.type === 'coin' ? (k > 0.85 ? (1 - k) / 0.15 : 1) : p.type === 'zrect' ? (1 - ks) : p.type === 'mote' ? Math.sin(k * 3.14) * (p.a || 0.8) : 1 - (p.steps ? ks : k);
       if (p.type === 'ring') {
         ctx.strokeStyle = p.c; ctx.lineWidth = (p.w || 4) * (1 - k) + 1;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r0 + (p.r1 - p.r0) * (1 - Math.pow(1 - k, 3)), 0, 6.283); ctx.stroke();
+        var rr = p.r0 + (p.r1 - p.r0) * (1 - Math.pow(1 - k, 3));
+        ctx.beginPath(); ctx.ellipse(p.x, p.y, rr, rr * (p.fy || 1), 0, 0, 6.283); ctx.stroke();
       } else if (p.type === 'zrect') {
         // F/I: прямоугольная рамка растёт рывками (как открытие окна в 95-м или пиксельная вспышка)
         var e2 = ks, hw = p.w0 + (p.w1 - p.w0) * e2, hh = p.h0 + (p.h1 - p.h0) * e2, u2 = p.u || 1;
@@ -369,6 +414,13 @@
           var st = 1 + Math.min(0.35, Math.abs(p.vy) * 0.04);
           ctx.beginPath(); ctx.ellipse(p.x, p.y, s / st, s * st, 0, 0, 6.283); ctx.fill();
           ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(p.x - s * 0.3, p.y - s * 0.35 * st, s * 0.3, s * 0.2, -0.5, 0, 6.283); ctx.fill();
+        } else if (p.type === 'chip') {
+          // L: фишки разлетаются и крутятся
+          chipDraw(p.x, p.y, s * 1.1, Math.abs(Math.cos(p.t * 8 + (p.ph || 0))), p.c);
+        } else if (p.type === 'drop') {
+          // M: брызги дождя — короткие штрихи по направлению полёта
+          ctx.strokeStyle = p.c; ctx.lineWidth = Math.max(0.8, s * 0.35); ctx.lineCap = 'round';
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 2.2, p.y - p.vy * 2.2); ctx.stroke();
         } else if (p.type === 'ink') {
           // H: капли туши
           ctx.beginPath(); ctx.arc(p.x, p.y, s * 0.7, 0, 6.283); ctx.fill();
@@ -388,7 +440,7 @@
     for (var i = 0; i < n && parts.length < 160; i++) {
       var a = Math.random() * 6.283, v = speed * (0.4 + Math.random() * 0.8);
       parts.push({ type: type || (Math.random() < 0.35 ? 'star' : 'sq'), x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - speed * (o.up != null ? o.up : 0.35), g: o.g != null ? o.g : 0.12,
-        s: (o.s || 2.5) + Math.random() * (o.sr || 3.5), c: colors[i % colors.length], t: 0, life: (o.life || 0.55) + Math.random() * 0.45, steps: o.steps, u: o.u, a: o.a });
+        s: (o.s || 2.5) + Math.random() * (o.sr || 3.5), c: colors[i % colors.length], t: 0, life: (o.life || 0.55) + Math.random() * 0.45, steps: o.steps, u: o.u, a: o.a, ph: Math.random() * 3 });
     }
     kick();
   }
@@ -498,6 +550,29 @@
         zrects(c, 6, rar ? ['#000080', RAR[rar] === '#FFC83D' ? '#808000' : '#000080'] : '#000', { u: 1, lw: 1, steps: 6, s0: 0.3, s1: 1.9, dash: [2, 2], gap: 0.045, life: 0.36 });
         return;
       }
+      if (theme === 'k') {
+        // тонкие кольца-обводки и несколько мягких огоньков — сдержанно
+        parts.push({ type: 'ring', x: c.x, y: c.y, r0: c.w * 0.3, r1: c.w * 0.95, c: rar ? RAR[rar] : biz, w: 1.2, t: 0, life: 0.6 });
+        parts.push({ type: 'ring', x: c.x, y: c.y, r0: c.w * 0.2, r1: c.w * 0.7, c: 'rgba(255,255,255,.8)', w: 0.8, t: -0.07, life: 0.55 });
+        if (rar >= 2 || up) parts.push({ type: 'ring', x: c.x, y: c.y, r0: c.w * 0.3, r1: c.w * 1.5, c: rar ? RAR[rar] : biz, w: 0.8, t: -0.14, life: 0.75 });
+        burst(c.x, c.y, rar === 3 ? 18 : 10, rar ? [RAR[rar], '#ffffff'] : [biz, '#ffffff'], 1.4, 'mote', { s: 4, sr: 5, g: 0, up: 0.5, life: 0.7, a: 0.85 });
+        return;
+      }
+      if (theme === 'l') {
+        // фишки разлетаются со стола, латунное кольцо; легенда — золотые фишки
+        var lc = rar === 3 ? ['#D9A441', '#E9C16A', '#B8862F'] : rar ? [RAR[rar] === '#4FC3FF' ? '#3A64C4' : '#8B52C9', biz] : [biz, '#1d1d1d', biz];
+        parts.push({ type: 'ring', x: c.x, y: c.y, r0: 8, r1: c.w * 0.8, c: 'rgba(233,193,120,.9)', w: 2.5, t: 0, life: 0.5 });
+        burst(c.x, c.y, rar === 3 ? 12 : up ? 9 : 7, lc, 3.6, 'chip', { s: 4, sr: 2.5, g: 0.22, up: 0.9, life: 0.7 });
+        burst(c.x, c.y, 8, ['#FFE3B0', '#E9C178'], 2.2, 'mote', { s: 3, sr: 3, g: 0, up: 0.4, life: 0.5, a: 0.9 });
+        return;
+      }
+      if (theme === 'm') {
+        // неоновое кольцо, «лужа» под сотрудником и брызги
+        parts.push({ type: 'ring', x: c.x, y: c.y, r0: 6, r1: c.w * 0.85, c: rar ? RAR[rar] : biz, w: 2, t: 0, life: 0.5 });
+        parts.push({ type: 'ring', x: c.x, y: c.y + c.h * 0.38, r0: 4, r1: c.w * 0.9, fy: 0.28, c: 'rgba(180,200,255,.8)', w: 1.2, t: 0.02, life: 0.7 });
+        burst(c.x, c.y + c.h * 0.3, rar === 3 ? 22 : 14, rar ? [RAR[rar], '#cfe0ff'] : [biz, '#cfe0ff', '#ffffff'], 3.4, 'drop', { s: 2.5, sr: 2, g: 0.24, up: 1, life: 0.55 });
+        return;
+      }
       if (theme === 'j') {
         parts.push({ type: 'ring', x: c.x, y: c.y, r0: 6, r1: c.w * 0.85, c: 'rgba(255,255,255,.95)', w: 3, t: 0, life: 0.55 });
         if (rar) parts.push({ type: 'ring', x: c.x, y: c.y, r0: 4, r1: c.w * 1.25, c: RAR[rar], w: 2, t: -0.06, life: 0.7 });
@@ -535,6 +610,9 @@
       if (theme === 'g') return burst(c.x, c.y + c.h * 0.25, 8, [cssVar('--gb', bz), '#ffffff'], 2.6, 'blob', { s: 2.5, sr: 3 });
       if (theme === 'h') return rays(c.x, c.y, 14, c.w * 0.4, c.w * 0.7, ['#111'], 1.8);
       if (theme === 'i') return zrects(c, 3, '#000', { u: 1, lw: 1, steps: 4, s0: 0.2, s1: 1, dash: [2, 2], life: 0.25 });
+      if (theme === 'k') { parts.push({ type: 'ring', x: c.x, y: c.y, r0: c.w * 0.2, r1: c.w * 0.6, c: bz, w: 1, t: 0, life: 0.45 }); kick(); return; }
+      if (theme === 'l') return burst(c.x, c.y + c.h * 0.25, 4, [bz, '#1d1d1d'], 2.4, 'chip', { s: 3, sr: 1.5, g: 0.22, up: 0.9, life: 0.5 });
+      if (theme === 'm') { parts.push({ type: 'ring', x: c.x, y: c.y + c.h * 0.36, r0: 3, r1: c.w * 0.5, fy: 0.3, c: 'rgba(190,210,255,.85)', w: 1.2, t: 0, life: 0.6 }); kick(); return; }
       if (theme === 'j') return burst(c.x, c.y + c.h * 0.2, 8, ['#ffffff', bz], 1.2, 'mote', { s: 5, sr: 5, g: 0, up: 0.6, life: 0.7, a: 0.8 });
       burst(c.x, c.y + c.h * 0.25, 10, [bz, '#ffffff'], 3);
     },
@@ -545,13 +623,16 @@
       if (theme === 'f') return zrects(c, 3, ['#ffcd75', '#f4f4f4'], { u: 3, lw: 3, steps: 5 }), burst(c.x, c.y, 20, ['#ffcd75', '#f4f4f4', '#73eff7'], 4, 'px', { u: 3, s: 3, steps: 8 });
       if (theme === 'h') return rays(c.x, c.y, 28, c.w * 0.4, c.w, ['#111', cssVar('--hk', '#e8213c')], 2.6);
       if (theme === 'i') return zrects(c, 6, '#000080', { u: 1, lw: 1, dash: [2, 2], gap: 0.045 });
+      if (theme === 'k') { parts.push({ type: 'ring', x: c.x, y: c.y, r0: 6, r1: c.w, c: '#F3D98B', w: 1.2, t: 0, life: 0.7 }); return burst(c.x, c.y, 14, ['#F3D98B', '#ffffff'], 1.4, 'mote', { s: 4, sr: 5, g: 0, life: 0.8 }); }
+      if (theme === 'l') return burst(c.x, c.y, 12, ['#D9A441', '#E9C16A', cssVar('--biz', '#B8324A')], 3.6, 'chip', { s: 4, sr: 2, g: 0.22, up: 0.9, life: 0.7 });
+      if (theme === 'm') return burst(c.x, c.y, 18, ['#FFD98A', '#cfe0ff', cssVar('--biz', '#45E0D8')], 3.4, 'drop', { s: 2.5, sr: 2, g: 0.24, up: 1, life: 0.6 });
       parts.push({ type: 'ring', x: c.x, y: c.y, r0: 6, r1: c.w, c: '#FFC83D', t: 0, life: 0.6 });
       burst(c.x, c.y, 24, ['#FFC83D', '#ffffff', cssVar('--biz', '#B9FF3F')], 4.5, theme === 'g' ? 'blob' : theme === 'j' ? 'mote' : 'star', theme === 'j' ? { s: 5, sr: 6, g: 0, life: 0.8 } : null);
     },
     // аврал: I — «синий экран», остальные новые темы — крупная надпись в своём стиле
     rush: function (node) {
       if (theme === 'i') return bsod();
-      var t = { f: 'POWER UP! ×2', g: 'Аврал ×2!', h: 'АВРАЛ!!', j: 'Аврал ×2' }[theme];
+      var t = { f: 'POWER UP! ×2', g: 'Аврал ×2!', h: 'АВРАЛ!!', j: 'Аврал ×2', k: 'Аврал <b>×2</b>', l: 'Ставки <b>×2</b>', m: '<i>残業</i>Аврал ×2' }[theme];
       if (!t) return;
       floatEl(window.innerWidth / 2, window.innerHeight * 0.42, t, 'rushx');
       if (theme === 'h' && !reduce) rays(window.innerWidth / 2, window.innerHeight * 0.42, 40, 60, window.innerWidth * 0.7, ['#111'], 3);

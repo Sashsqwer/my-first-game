@@ -13,7 +13,7 @@ Telegram Mini App игра (idle + merge): выбираешь один из 8 б
 |---|---|
 | `app/index.html`, `app/style.css`, `app/game.js` | сама игра, без сборщиков и npm |
 | `app/content.js` | тексты 8 бизнесов: сотрудники, шутки, помещения, улучшения, потребности |
-| `app/theme.js`, `app/themes.css`, `app/themes2.css`, `app/themes3.css` | пробные оформления A–J (`?theme=a` … `j`; `?theme=old` — вернуть старое; выбор запоминается, ещё — ⚙️ → «Оформление»). D «Диорама», E «Настолка» — в `themes2.css`; F «Пиксель-арт», G «Пластилин», H «Манга», I «Офис-95», J «Стеклянный город» — в `themes3.css` (пиксельный шрифт — `app/fonts/`, GNU Unifont, OFL). По умолчанию у игроков — старое |
+| `app/theme.js`, `app/themes.css`, `app/themes2.css`, `app/themes3.css`, `app/themes4.css` | пробные оформления A–M (`?theme=a` … `m`; `?theme=old` — вернуть старое; выбор запоминается, ещё — ⚙️ → «Оформление»). D «Диорама», E «Настолка» — в `themes2.css`; F «Пиксель-арт», G «Пластилин», H «Манга», I «Офис-95», J «Стеклянный город» — в `themes3.css` (пиксельный шрифт — `app/fonts/`, GNU Unifont, OFL). Тёмные K «Полночь», L «Нуар-казино», M «Ночной Токио» — в `themes4.css`. По умолчанию у игроков — старое |
 | `app/avatars.js` | сотрудники, нарисованные кодом (SVG): `avatar(бизнес, уровень, редкость)` |
 | `app/net.js` | связь с сервером (друзья, приглашения, рейтинг) — `window.GameNet` |
 | `app/balance.js` | все цифры баланса (цены, доход, помещения, улучшения) — общие для игры и симуляции |
@@ -63,7 +63,7 @@ python3 -m http.server -d app 8000
 
 ## Скриншоты тем
 
-`node tools/screens.js` снимает и темы: `docs/screens/themes/<тема>-*.jpg` (old, a–j; у F–J ещё аврал `-10-rush` и настройки `-11-settings`), коллажи `docs/screens/themes-compare.png` (старая + A/B/C), `docs/screens/themes-compare-2.png` (A–E с рисованными сотрудниками) и `docs/screens/themes-compare-3.png` (F–J), лист всех 64 сотрудников `docs/screens/avatars-sheet.png`.
+`node tools/screens.js` снимает и темы: `docs/screens/themes/<тема>-*.jpg` (old, a–m; у F–M ещё аврал `-10-rush` и настройки `-11-settings`), коллажи `docs/screens/themes-compare.png` (старая + A/B/C), `docs/screens/themes-compare-2.png` (A–E с рисованными сотрудниками) `docs/screens/themes-compare-3.png` (F–J) и `docs/screens/themes-compare-4.png` (тёмные K–M рядом с A и B), лист всех 64 сотрудников `docs/screens/avatars-sheet.png`.
 
 ## Сотрудники: рисованные и картинки
 
