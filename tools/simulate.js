@@ -46,7 +46,7 @@ function run(seed, verbose) {
   const rnd = rng(seed);
   const biz = B.newBusiness('it', 0, EXTRA);
   const log = [];
-  const res = { firstMerge: null, lvl: {}, room: {}, active: 0, rares: 0 };
+  const res = { firstMerge: null, lvl: {}, room: {}, active: 0, rares: 0, hire3: null, hire4: null, firstQuest: null, chests: 0, days: 0, at: {} };
   let now = 0, rushUntil = 0, rushReady = 0, freeAt = 0, lastTapAt = -99, day = -1, quests = [];
   const inc = () => B.incomePerSec(biz, now * 1000, now < rushUntil);
   const event = msg => { if (verbose) log.push(`${when(now).padStart(12)}  ${msg}  | деньги ${fmt(biz.money)}, доход ${fmt(inc() * H)}/ч`); };
@@ -54,7 +54,11 @@ function run(seed, verbose) {
   const quest = (id, n) => {
     for (const q of quests) if (q.id === id && !q.done) {
       q.have += n || 1;
-      if (q.have >= q.need) { q.done = true; give(B.minutesIncome(biz, B.QUEST_REWARD_MIN, B.QUEST_REWARD_FLOOR, now * 1000)); }
+      if (q.have >= q.need) {
+        q.done = true; give(B.minutesIncome(biz, B.QUEST_REWARD_MIN, B.QUEST_REWARD_FLOOR, now * 1000));
+        if (res.firstQuest === null) res.firstQuest = now;
+        if (quests.every(x => x.done)) { res.chests++; biz.inbox.push(...B.rollPack(B.CHEST_PACK, rnd)); }
+      }
     }
   };
   function mergeAll() {
@@ -82,22 +86,26 @@ function run(seed, verbose) {
     const c = B.CALENDAR[day % 7];
     if (c.type === 'money') give(B.minutesIncome(biz, c.minutes, c.min, now * 1000));
     else if (c.type === 'pack') biz.inbox.push(...B.rollPack(c.pack, rnd));
-    // задания дня — три самых простых для разумного игрока
-    quests = B.QUESTS.filter(q => ['merge', 'hire', 'care'].includes(q.id)).map(q => ({ id: q.id, need: q.need, have: 0, done: false }));
+    // задания дня — как в игре: 3 случайных из выполнимых (B.questNeed > 0)
+    const pool = B.QUESTS.map(q => ({ id: q.id, need: B.questNeed(q.id, biz, now * 1000), have: 0, done: false })).filter(q => q.need > 0);
+    quests = [];
+    while (quests.length < B.QUEST_COUNT && pool.length) quests.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]);
+    res.days++;
   }
   function second(sessionStart) {
     biz.money += inc(); biz.earned += inc();
     if (now - lastTapAt >= B.TAP_COOLDOWN && rnd() < TAP_RATE) {
       lastTapAt = now;
       const best = biz.grid.reduce((m, v) => B.cellIncome(v) > B.cellIncome(m) ? v : m, 0);
-      give(B.cellIncome(best) * B.incomeMult(biz) * B.TAP_SECONDS * (now < rushUntil ? B.RUSH_MULT : 1));
+      give(B.tapGain(biz, best, now < rushUntil)); quest('tap');
     }
     if (now >= freeAt && now - sessionStart >= 30) { freeAt = now + B.PACKS.free.cooldownH * H; biz.inbox.push(...B.rollPack('free', rnd)); quest('pack'); }
+    for (const m of [1, 2, 3, 5, 10]) if (now === m * 60 - 1) res.at[m] = { inc: B.baseIncome(biz) * H, hires: biz.hires, lvl: B.maxLevel(biz) };
     if (now >= rushReady && now - sessionStart >= 60) { rushUntil = now + B.RUSH_MIN * 60; rushReady = now + B.RUSH_COOLDOWN_H * H; }
     for (let i = 0; i < 3; i++) if (B.needLevel(biz, i, now * 1000) < 0.9 && B.canCare(biz, i, now * 1000)) { biz.needs[i] = now * 1000; quest('care'); }
     const next = B.ROOMS[biz.room + 1];
     if (next && B.maxLevel(biz) >= next.needLevel && biz.money >= next.needMoney) {
-      biz.money = 0; biz.room++;
+      biz.money -= next.needMoney; biz.room++;
       const g = new Array(B.cellCount(biz.room, EXTRA)).fill(0);
       biz.grid.forEach((v, i) => { g[i] = v; });
       biz.grid = g;
@@ -107,6 +115,8 @@ function run(seed, verbose) {
     place(); mergeAll();
     while (biz.grid.includes(0) && biz.money >= B.hireCost(biz)) {
       biz.money -= B.hireCost(biz); biz.grid[biz.grid.indexOf(0)] = 1; biz.hires++; quest('hire');
+      if (biz.hires === 3 && res.hire3 === null) res.hire3 = now;
+      if (biz.hires === 4 && res.hire4 === null) res.hire4 = now;
       mergeAll(); place();
     }
     // улучшения: если окупаются примерно за час (кресла — если стоят не больше 3 часов дохода)
@@ -117,7 +127,7 @@ function run(seed, verbose) {
       const cost = B.upgradeCost(id, lvl);
       const limit = id === 'chairs' ? perH * 3 : perH;
       // накопление на переезд важнее: улучшение — только если после покупки переезд не отодвигается сильно
-      if (cost <= biz.money && cost <= limit) { biz.money -= cost; biz.upgrades[id]++; }
+      if (cost <= biz.money && cost <= limit) { biz.money -= cost; biz.upgrades[id]++; quest('upgrade'); }
     }
   }
 
@@ -158,5 +168,10 @@ console.log(`\nСводка по ${RUNS} прогонам (медиана; в с
 row('первое слияние', r => r.firstMerge);
 for (let l = 3; l <= B.MAX_LEVEL; l++) row(`${l}-й уровень сотрудника` + (l === B.HOLDING_UNLOCK_LEVEL ? ' (2-й бизнес)' : ''), r => r.lvl[l], r => r['lvlA' + l]);
 for (let i = 1; i < B.ROOMS.length; i++) row(`помещение ${i + 1} (×${roomMult(i)})`, r => r.room[i], r => r['roomA' + i]);
+row('3-й найм', r => r.hire3);
+row('4-й найм', r => r.hire4);
+row('первое задание дня выполнено', r => r.firstQuest);
+console.log('  сундук за 3 задания (медиана):   ', Math.round(med(all.map(r => r.chests / Math.max(1, r.days))) * 100) + '% дней');
+console.log('  первые минуты (медиана): ' + [1, 2, 3, 5, 10].map(m => `${m} мин — ${fmt(med(all.map(r => r.at[m] && r.at[m].inc)))} ₽/ч, наймов ${med(all.map(r => r.at[m] && r.at[m].hires))}, ур. ${med(all.map(r => r.at[m] && r.at[m].lvl))}`).join('; '));
 console.log('  доход в конце (медиана):         ', fmt(med(all.map(r => B.baseIncome(r.biz) * H))) + ' ₽/ч');
 console.log('  повышений редкости при слиянии (медиана):', med(all.map(r => r.rares)));

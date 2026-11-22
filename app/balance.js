@@ -16,6 +16,7 @@
     COLS: 4,
     TAP_SECONDS: 10,          // тап = 10 секунд дохода сотрудника
     TAP_COOLDOWN: 5,          // кулдаун тапа, сек
+    TAP_MIN: 1,               // но не меньше 1 ₽ за тап — в первые минуты тап заметен, дальше не важен
     OFFLINE_MIN_SEC: 60,      // меньше минуты — окно не показываем
     OFFLINE_CAP_HOURS: [8, 12, 24], // по уровню «Удобных кресел»
     HOLDING_UNLOCK_LEVEL: 5,  // задел под вариант 05: 2-й бизнес на 5-м уровне сотрудника
@@ -100,11 +101,14 @@
 
     // ---------- Задания дня ----------
     QUEST_COUNT: 3,
+    CHEST_PACK: 'free',       // сундук за все три — пачка (2 резюме) + 1 осколок; «Стандарт» разгонял игру в ~1,5 раза
     QUEST_REWARD_MIN: 30,     // каждое задание — 30 минут дохода (не меньше 150 ₽)
     QUEST_REWARD_FLOOR: 150,
+    // need — сколько нужно в начале игры; «найм» и «слияния» дальше подстраиваются под доход (B.questNeed),
+    // потому что найм дорожает ×1.17 и через пару дней 40 наймов за день уже невозможны
     QUESTS: [
-      { id: 'merge', need: 25 },
-      { id: 'hire', need: 40 },
+      { id: 'merge', need: 12 },
+      { id: 'hire', need: 15 },
       { id: 'care', need: 3 },
       { id: 'tap', need: 40 },
       { id: 'pack', need: 1 },
@@ -187,10 +191,7 @@
     return { gain: base * avg * (sec + rushSec * (B.RUSH_MULT - 1)), factor: avg };
   };
 
-  B.hireCost = function (biz) {
-    var disc = 1 - 0.05 * (biz.upgrades.pr || 0);
-    return Math.round(B.HIRE_BASE * Math.pow(B.HIRE_GROWTH, biz.hires) * disc);
-  };
+  B.hireCost = function (biz) { return B.hireCostAt(biz, biz.hires); };
   B.packPrice = function (biz) {
     return Math.round(B.hireCost(biz) * B.PACKS.standard.priceHires / 10) * 10;
   };
@@ -208,6 +209,45 @@
     // самые ценные — в конце (красивее открывать)
     out.sort(function (a, b) { return (B.rar(a) - B.rar(b)) || (B.lvl(a) - B.lvl(b)); });
     return out;
+  };
+
+  // Цена найма номер h (0 — первый) с учётом скидки «пиара»
+  B.hireCostAt = function (biz, h) {
+    var disc = 1 - 0.05 * (biz.upgrades.pr || 0);
+    return Math.round(B.HIRE_BASE * Math.pow(B.HIRE_GROWTH, h) * disc);
+  };
+  // Тап по сотруднику v: TAP_SECONDS его дохода (×аврал), но не меньше TAP_MIN ₽
+  B.tapGain = function (biz, v, rush) {
+    return Math.max(B.TAP_MIN, B.cellIncome(v) * B.incomeMult(biz) * B.TAP_SECONDS * (rush ? B.RUSH_MULT : 1));
+  };
+
+  // Задание дня: сколько нужно сделать (0 — сегодня такое задание не даём, оно невыполнимо).
+  // Найм и слияния: в начале (меньше 30 наймов) — как в QUESTS, дальше — сколько наймов покупают 2 часа дохода.
+  // Улучшения: сколько самых дешёвых покупают 3 часа дохода (до 3).
+  B.questNeed = function (id, biz, now) {
+    var base = 0;
+    for (var i = 0; i < B.QUESTS.length; i++) if (B.QUESTS[i].id === id) base = B.QUESTS[i].need;
+    if (!base) return 0;
+    var perH = B.baseIncome(biz) * 3600;
+    if (id === 'hire' || id === 'merge') {
+      if ((biz.hires || 0) < 30) return base;
+      var budget = perH * 2, k = 0, h = biz.hires || 0;
+      while (k < base) { var c = B.hireCostAt(biz, h + k); if (c > budget) break; budget -= c; k++; }
+      if (id === 'hire') return k >= 2 ? k : 0;
+      return Math.max(1, k); // слияния бывают и из пачек (бесплатная — раз в 8 ч)
+    }
+    if (id === 'upgrade') {
+      var lv = {}, money = perH * 3, n = 0;
+      Object.keys(B.UPGRADES).forEach(function (u) { lv[u] = biz.upgrades[u] || 0; });
+      while (n < base) {
+        var best = null, bc = Infinity;
+        Object.keys(B.UPGRADES).forEach(function (u) { if (lv[u] < B.UPGRADES[u].max) { var c = B.upgradeCost(u, lv[u]); if (c < bc) { bc = c; best = u; } } });
+        if (!best || bc > money) break;
+        money -= bc; lv[best]++; n++;
+      }
+      return n;
+    }
+    return base;
   };
 
   B.offlineCapSec = function (biz) {
