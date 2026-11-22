@@ -110,6 +110,9 @@ window.__mockNet = {
   if (g[0] % 10 !== 2 || g[1] !== 0) problems.push('[logic] слияние 1+1 не сработало: ' + g.join(','));
   await page.waitForTimeout(300);
   await closeModals(page);
+  await page.waitForTimeout(300);
+  await shot(page, '04b-guide-gift.png'); // подсказка после обучения: «Забери подарок дня»
+  if (!/подарок/i.test(await page.locator('#tutor').innerText())) problems.push('[logic] нет подсказки «подарок дня» после обучения');
   // проверка правила редкости: обычный 2 + редкий 2 → редкий 3
   const rr = await page.evaluate(() => { const B = window.BALANCE; return [B.mergeResult(2, 12, 0.99).v, B.mergeResult(21, 31, 0).v, B.canMerge(3, 13), B.canMerge(3, 4), B.canMerge(8, 8)]; });
   if (rr[0] !== 13 || rr[1] !== 32 || !rr[2] || rr[3] || rr[4]) problems.push('[logic] правило слияния редкостей: ' + rr.join(','));
@@ -118,6 +121,7 @@ window.__mockNet = {
   await page.evaluate(() => {
     const s = window.__game.state, b = s.businesses[0], now = Date.now();
     b.grid = [25, 4, 13, 3, 12, 2, 2, 31, 1, 1, 0, 0];
+    s.guide = 3;
     b.seen = 5; b.money = 8400; b.hires = 30;
     b.needs = [now - 4.6 * 3600e3, now - 1.2 * 3600e3, now - 5.4 * 3600e3]; // кофе и отдых просели
     s.net.invited = 1;
@@ -222,7 +226,7 @@ window.__mockNet = {
     const { ctx: c4, page: p4 } = await newPage(iphone, { mock: true });
     await p4.click('.biz[data-type="coffee"]'); await p4.waitForTimeout(250);
     await p4.click('.modal [data-start]'); await p4.waitForTimeout(300);
-    await p4.evaluate(() => { const s = window.__game.state; s.tutorial = 3; s.businesses[0].grid = [3, 2, 12, 1, 0, 0, 0, 0, 0, 0, 0, 0]; window.__game.rebuild(); });
+    await p4.evaluate(() => { const s = window.__game.state; s.tutorial = 3; s.guide = 3; s.businesses[0].grid = [3, 2, 12, 1, 0, 0, 0, 0, 0, 0, 0, 0]; window.__game.rebuild(); });
     await p4.click('.tab[data-view="friends"]'); await p4.waitForTimeout(100);
     if (!(await p4.locator('.loading').count())) problems.push('[logic] нет «загрузки» у друзей');
     await p4.waitForTimeout(500);
@@ -254,7 +258,7 @@ window.__mockNet = {
     await p2.click('.biz[data-type="delivery"]'); await p2.waitForTimeout(250);
     await noHScroll(p2, `детали ${w}px`);
     await p2.click('.modal [data-start]'); await p2.waitForTimeout(300);
-    await p2.evaluate(() => { const s = window.__game.state, b = s.businesses[0]; s.tutorial = 3; b.room = 2; b.grid = [1, 2, 13, 4, 25, 6, 37, 8, 1, 12, 3, 4, 5, 26, 7, 0, 0, 0, 0, 0]; b.seen = 8; b.money = 2.5e7; window.__game.rebuild(); });
+    await p2.evaluate(() => { const s = window.__game.state, b = s.businesses[0]; s.tutorial = 3; s.guide = 3; b.room = 2; b.grid = [1, 2, 13, 4, 25, 6, 37, 8, 1, 12, 3, 4, 5, 26, 7, 0, 0, 0, 0, 0]; b.seen = 8; b.money = 2.5e7; window.__game.rebuild(); });
     for (const v of ['upgrades', 'rating', 'friends', 'shop', 'office']) { await p2.click(`.tab[data-view="${v}"]`); await p2.waitForTimeout(120); await noHScroll(p2, `${v} ${w}px`); }
     if (!th && w0 === 320) await shot(p2, '20-narrow-320.png');
     if (th && w0 === 320) await p2.screenshot({ path: path.join(TOUT, th + '-9-narrow-320.jpg'), type: 'jpeg', quality: 82 });
@@ -329,7 +333,7 @@ window.__mockNet = {
         const B = window.BALANCE, s = window.__game.state, now = Date.now();
         const b = B.newBusiness(bz, now, 0);
         b.grid = grid.slice(); b.seen = 6; b.money = 12480; b.hires = 34; b.needs = [now - 4.8 * 3600e3, now - 1.5 * 3600e3, now - 1 * 3600e3];
-        s.businesses = [b]; s.active = 0; s.tutorial = 3; s.slots = { friends: 0, stars: 0, streak: false }; s.net.claimed = []; s.net.invited = 1;
+        s.businesses = [b]; s.active = 0; s.tutorial = 3; s.guide = 3; s.slots = { friends: 0, stars: 0, streak: false }; s.net.claimed = []; s.net.invited = 1;
       }, [bz, grid]);
       if (bz === 'it') await pt.evaluate(() => { window.__game.state.slots.friends = 1; });
       await pt.evaluate(() => window.__game.setView('office'));

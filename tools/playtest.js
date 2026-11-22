@@ -511,7 +511,7 @@ function report() {
     await page.waitForTimeout(3000);
     const fx = await page.evaluate(() => document.getElementById('fx').children.length);
     const i1 = await page.evaluate(() => window.__intervals());
-    check('слабый телефон (CPU ×4): офис с дождём ≥ 30 кадров/с', fps >= 30, Math.round(fps) + ' к/с');
+    check(`слабый телефон (CPU ×4): офис с дождём ≥ 30 кадров/с (было ${Math.round(fps)})`, fps >= 30, Math.round(fps) + ' к/с');
     check('нет утечек setInterval (вкладки, тапы)', i1 <= i0 + 0, { i0, i1 });
     check('всплывающие «+₽» убираются (нет накопления в #fx)', fx < 10, fx);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
