@@ -133,7 +133,7 @@ function report() {
     check(D('обучение: рука показывает слияние'), await page.locator('#tutor .hand').count());
     const g0 = s.businesses[0].grid; await drag(page, g0.indexOf(1, g0.indexOf(1) + 1), g0.indexOf(1));
     s = await S(page);
-    check(D('слияние 1+1 → 2, обучение пройдено'), s.businesses[0].grid.includes(2) && s.tutorial === 3, s.businesses[0].grid);
+    check(D('слияние 1+1 → 2, обучение пройдено'), s.businesses[0].grid.some(v => v % 10 === 2) && s.tutorial === 3, s.businesses[0].grid);
     check(D('окно «Новый сотрудник» после слияния'), await page.locator('.modal:not([hidden]) h2').count());
     await closeModals(page);
     // подсказки после обучения: подарок → пачка → задания
