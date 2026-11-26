@@ -1,31 +1,35 @@
-/* «Стартап с нуля» — стили (скины) оформления.
-   mix — «Основной» (по умолчанию у всех): основа K «Полночь» + дождь, туман и отражения из M + золото B для легенд и премиума + сочные кнопки C.
-   Скины: k «Полночь», m «Ночной Токио», b «Премиум-золото», c «Кибер-комикс» — открываются в игре (⚙️ → «Стили», условия — B.SKINS в balance.js).
+/* «Стартап с нуля» — стили оформления. Стили идут КОМПЛЕКТАМИ «оформление + сотрудники» (B.SKINS в balance.js):
+   main — «Основной» «Сочный офис» (бесплатно, у всех по умолчанию) + мультяшные сотрудники;
+   neon — «Ночной неон» (ночь, дождь, неон, золото) + неоновые сотрудники; за 3 друзей или ⭐ 75;
+   collection — «Коллекция» (витрина коллекционера, студийный свет, подставки) + 3D-фигурки; ⭐ 150.
+   Картинки сотрудников комплекта — app/img/staff/<комплект>/ (списки — CONTENT.STAFF_IMG, пока пустые → SVG из avatars.js).
    Выбор хранится в сохранении игрока (state.skin), здесь — только копия в localStorage, чтобы стиль встал до первой отрисовки.
-   ?theme=mix|k|m|b|c в адресе — только для проверки: показывает стиль, ничего не сохраняет.
-   ?theme=ca|cb|cc — ПРОБНЫЕ варианты нового мультяшного основного стиля (A «Солнечный город», B «Сочный офис», C «Конфетный поп»),
-   только для просмотра: в «Стили» не добавлены (их нет в LIST), стили — themes-cartoon.css, у <html> ставится data-cartoon.
-   Стили: общее и B, C — themes.css; K, M — themes4.css; основной — themes-main.css.
+   ?theme=main|neon|collection в адресе — только для проверки: показывает стиль, ничего не сохраняет.
+   Старые id (mix, k, m, b, c и пробные ca/cb/cc) переводятся: mix/cb/ca/cc → main, k/m → neon, b/c → collection.
+   CSS: общее — themes.css; основной — themes-main.css (общая «мультяшная» основа html[data-cartoon] + свой вид),
+   «Коллекция» — themes-collection.css (на той же основе), «Ночной неон» — themes-neon.css.
    Здесь: сцена-фон, свои SVG-иконки меню и шапки, эффекты (window.GameFx: монеты, вспышки, частицы).
    Подключается в <head> без defer — чтобы стиль встал до первой отрисовки. */
 (function () {
   'use strict';
   var KEY = 'startup_zero_theme';
-  var LIST = [{ id: 'mix', n: 'Основной' }, { id: 'k', n: 'Полночь' }, { id: 'm', n: 'Ночной Токио' }, { id: 'c', n: 'Кибер-комикс' }, { id: 'b', n: 'Премиум-золото' }];
-  var BG = { mix: '#07090f', k: '#07090f', m: '#090a18', b: '#0d0a12', c: '#120a2a', ca: '#5cc2ff', cb: '#f4c98f', cc: '#7a3cf0' };
-  var CARTOON = { ca: 1, cb: 1, cc: 1 };
+  var LIST = [{ id: 'main', n: 'Основной' }, { id: 'neon', n: 'Ночной неон' }, { id: 'collection', n: 'Коллекция' }];
+  var BG = { main: '#f4c98f', neon: '#07090f', collection: '#e9e3da' };
+  var OLD = { mix: 'main', cb: 'main', ca: 'main', cc: 'main', k: 'neon', m: 'neon', b: 'collection', c: 'collection' };
+  var CARTOON = { main: 1, collection: 1 };
   var root = document.documentElement;
 
   function valid(t) { return typeof t === 'string' && BG.hasOwnProperty(t); }
+  function upgrade(t) { return typeof t === 'string' && OLD.hasOwnProperty(t) ? OLD[t] : t; }
   function read() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
   function write(t) { try { localStorage.setItem(KEY, t); } catch (e) {} }
 
-  var theme = read(), forced = null;
+  var theme = upgrade(read()), forced = null;
   try {
     var q = new URLSearchParams(location.search).get('theme');
-    if (q != null && valid(q.toLowerCase())) forced = q.toLowerCase();
+    if (q != null && valid(upgrade(q.toLowerCase()))) forced = upgrade(q.toLowerCase());
   } catch (e) {}
-  if (!valid(theme)) theme = 'mix'; // старые пробные (old, a–l) → основной
+  if (!valid(theme)) theme = 'main'; // неизвестное → основной
   if (forced) theme = forced;
 
   function tgColors() {
@@ -37,6 +41,7 @@
   function apply() {
     root.setAttribute('data-theme', theme);
     if (CARTOON[theme]) root.setAttribute('data-cartoon', theme); else root.removeAttribute('data-cartoon');
+    root.style.colorScheme = theme === 'neon' ? 'dark' : 'light';
     var m = document.querySelector('meta[name="theme-color"]');
     if (m) m.setAttribute('content', BG[theme]);
   }
@@ -87,56 +92,30 @@
   var K_LINES = '<svg class="k-lines" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="kgl" x1="0" y1="0" x2="1" y2="0">' +
     '<stop offset="0" class="ks0"/><stop offset=".55" class="ks1"/><stop offset="1" class="ks0"/></linearGradient></defs>' +
     '<path d="M-30 190 C 110 90, 250 300, 430 150"/><path class="kl2" d="M-30 250 C 140 170, 230 330, 430 230"/><path d="M-30 690 C 130 600, 260 780, 430 640"/></svg>';
-  // ---------- Мультяшные сцены (пробные основные стили ca/cb/cc): SVG с толстым контуром, классы красятся в themes-cartoon.css ----------
+  // ---------- Сцены основного и «Коллекции»: SVG, классы красятся в themes-main.css / themes-collection.css ----------
   function cloud(x, y, k) {
     return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><path class="cl" d="M10 40 C-8 40 -6 16 14 18 C16 2 40 -2 48 12 C56 0 82 4 80 22 C98 22 98 42 82 42 Z"/>' +
       '<path class="cl-s" d="M6 36 C20 44 70 44 88 34 C90 40 86 42 82 42 L10 40 C6 40 4 38 6 36Z"/></g>';
   }
-  function houses(seed) {
-    // ряд домиков: фасады, крыши, окна; один — магазин с навесом цвета бизнеса
-    var r = rnd(seed), x = -6, out = '', i = 0, cols = ['h1', 'h2', 'h3', 'h4', 'h5'];
-    while (x < 410) {
-      var w = Math.round(44 + r() * 30), h = Math.round(54 + r() * 46), y = 168 - h, c = cols[Math.floor(r() * cols.length)];
-      var shop = i === 2;
-      out += '<g>';
-      if (r() < 0.5 && !shop) out += '<path class="roof" d="M' + (x - 5) + ' ' + y + ' L' + (x + w / 2) + ' ' + (y - 24) + ' L' + (x + w + 5) + ' ' + y + 'Z"/>';
-      else out += '<rect class="roof" x="' + (x - 3) + '" y="' + (y - 8) + '" width="' + (w + 6) + '" height="9" rx="3"/>';
-      out += '<rect class="hs ' + (shop ? 'h-biz' : c) + '" x="' + x + '" y="' + y + '" width="' + w + '" height="' + (h + 4) + '"/>';
-      for (var wy = y + 10; wy < 150; wy += 20) for (var wx = x + 8; wx < x + w - 14; wx += 18) out += '<rect class="wn" x="' + wx + '" y="' + wy + '" width="10" height="12" rx="2"/>';
-      if (shop) {
-        out += '<path class="awn" d="M' + (x - 4) + ' ' + (y + 6) + ' h' + (w + 8) + ' l-4 14 h-' + w + 'z"/>';
-        for (var sx = x; sx < x + w; sx += 12) out += '<path class="awn-s" d="M' + (sx + 2) + ' ' + (y + 6) + ' h6 l-1 14 h-6z"/>';
-        out += '<rect class="door" x="' + (x + w / 2 - 9) + '" y="' + (168 - 30) + '" width="18" height="30" rx="3"/>';
+  // полка «Коллекции»: доска, коробки-«блайнд-боксы», колпак со звездой, фигурка-силуэт на подставке
+  function shelf(seed) {
+    var r = rnd(seed), x = 8, out = '';
+    while (x < 190) {
+      var k = Math.floor(r() * 3), w;
+      if (k === 0) { w = 30 + Math.round(r() * 8); var h = 38 + Math.round(r() * 10);
+        out += '<rect class="bx b' + Math.floor(r() * 3) + '" x="' + x + '" y="' + (70 - h) + '" width="' + w + '" height="' + h + '" rx="3"/><rect class="bx-w" x="' + (x + 5) + '" y="' + (70 - h + 8) + '" width="' + (w - 10) + '" height="' + (h - 18) + '" rx="3"/>';
+      } else if (k === 1) { w = 30;
+        out += '<rect class="pd-s" x="' + x + '" y="62" width="30" height="8" rx="3"/><path class="jar" d="M' + (x + 3) + ' 62 V36 a12 12 0 0 1 24 0 V62z"/><circle class="fg" cx="' + (x + 15) + '" cy="42" r="6"/><path class="fg" d="M' + (x + 8) + ' 62 q7 -16 14 0z"/><path class="jar-h" d="M' + (x + 8) + ' 56 V38"/>';
+      } else { w = 22;
+        out += '<ellipse class="pd-s" cx="' + (x + 11) + '" cy="67" rx="11" ry="3.5"/><circle class="fg" cx="' + (x + 11) + '" cy="44" r="7"/><path class="fg" d="M' + (x + 2) + ' 66 q9 -22 18 0z"/>';
       }
-      out += '</g>';
-      x += w + Math.round(2 + r() * 8); i++;
+      x += w + 8 + Math.round(r() * 8);
     }
-    return out;
-  }
-  function tree(x, y, k) {
-    return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><rect class="trunk" x="-4" y="0" width="8" height="22" rx="2"/>' +
-      '<circle class="leaf" cx="0" cy="-8" r="17"/><circle class="leaf" cx="-12" cy="2" r="11"/><circle class="leaf" cx="12" cy="1" r="12"/><circle class="leaf-h" cx="-5" cy="-14" r="6"/></g>';
-  }
-  function star4(x, y, s, cls) {
-    return '<path class="' + cls + '" d="M' + x + ' ' + (y - s) + ' Q' + (x + s * .18) + ' ' + (y - s * .18) + ' ' + (x + s) + ' ' + y + ' Q' + (x + s * .18) + ' ' + (y + s * .18) + ' ' + x + ' ' + (y + s) +
-      ' Q' + (x - s * .18) + ' ' + (y + s * .18) + ' ' + (x - s) + ' ' + y + ' Q' + (x - s * .18) + ' ' + (y - s * .18) + ' ' + x + ' ' + (y - s) + 'Z"/>';
+    return out + '<rect class="sh-b" x="0" y="70" width="200" height="7" rx="2"/><rect class="sh-u" x="0" y="77" width="200" height="4"/>';
   }
   var CARTOON_SCENE = {
-    // A «Солнечный город»: небо, солнце с лучами, облака плывут, дальний город, улица с домиками и деревьями
-    ca: function () {
-      return '<div class="sc-x">' +
-        '<div class="ca-sun"><svg viewBox="-60 -60 120 120"><g class="rays">' + Array.apply(null, Array(12)).map(function (_, i) { return '<path d="M-5 -56 L5 -56 L2 -34 L-2 -34Z" transform="rotate(' + i * 30 + ')"/>'; }).join('') + '</g>' +
-        '<circle class="sun" r="26"/><circle class="sun-h" cx="-8" cy="-9" r="8"/></svg></div>' +
-        '<div class="ca-cl c1"><svg viewBox="-4 -4 106 52">' + cloud(0, 0, 1) + '</svg></div>' +
-        '<div class="ca-cl c2"><svg viewBox="-4 -4 106 52">' + cloud(0, 0, 1) + '</svg></div>' +
-        '<div class="ca-cl c3"><svg viewBox="-4 -4 106 52">' + cloud(0, 0, 1) + '</svg></div>' +
-        '<svg class="ca-far" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice">' + cityRects(23, 400, 0, 50, 130, false, 'cf') + '</svg>' +
-        '<svg class="ca-street" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice"><rect class="grass" x="-10" y="160" width="420" height="40"/>' + houses(7) +
-        tree(18, 150, 1.1) + tree(380, 152, 1) + tree(236, 156, .8) + '<rect class="road" x="-10" y="172" width="420" height="40"/><path class="road-l" d="M0 186 h30 M60 186 h30 M120 186 h30 M180 186 h30 M240 186 h30 M300 186 h30 M360 186 h30"/></svg>' +
-        '</div>';
-    },
-    // B «Сочный офис»: обои, большое окно с городом и облаками, часы, полка, растения, паркет
-    cb: function () {
+    // основной «Сочный офис»: обои, большое окно с городом и облаками, часы, полка, растения, паркет
+    main: function () {
       return '<div class="sc-x"><i class="cb-wall"></i>' +
         '<svg class="cb-win" viewBox="0 0 300 190"><rect class="wf" x="4" y="4" width="292" height="170" rx="14"/><rect class="sky" x="16" y="16" width="268" height="146" rx="6"/>' +
         '<g class="wcity">' + cityRects(41, 268, 0, 30, 80, false, 'wc').replace(/y="(\d+(\.\d+)?)"/g, function (m, v) { return 'y="' + (+v - 38) + '"'; }) + '</g>' +
@@ -150,27 +129,18 @@
         '<path class="pot" d="M34 128 H86 L80 190 H40 Z"/><rect class="pot-r" x="30" y="124" width="60" height="13" rx="5"/></svg>' +
         '<i class="cb-floor"></i></div>';
     },
-    // C «Конфетный поп»: лучи «солнышка» крутятся, звёздочки мерцают, конфетти
-    cc: function () {
-      var st = '', r = rnd(5);
-      for (var i = 0; i < 16; i++) st += star4(Math.round(r() * 400), Math.round(r() * 800), Math.round(5 + r() * 9), 'st s' + (i % 3));
-      var dots = '';
-      for (var j = 0; j < 22; j++) dots += '<circle class="cf c' + (j % 4) + '" cx="' + Math.round(r() * 400) + '" cy="' + Math.round(r() * 800) + '" r="' + (2 + r() * 3).toFixed(1) + '"/>';
-      return '<div class="sc-x"><i class="cc-rays"></i><i class="cc-glow"></i>' +
-        '<svg class="cc-dots" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice">' + dots + '</svg>' +
-        '<svg class="cc-stars" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice">' + st + '</svg></div>';
+    // «Коллекция»: студийный фон-«циклорама», мягкие софиты сверху, полки коллекционера (в лёгком расфокусе), стол-подиум
+    collection: function () {
+      return '<div class="sc-x"><i class="co-wall"></i><i class="co-spot s1"></i><i class="co-spot s2"></i>' +
+        '<svg class="co-shelf sf1" viewBox="0 0 200 84">' + shelf(11) + '</svg>' +
+        '<svg class="co-shelf sf2" viewBox="0 0 200 84">' + shelf(29) + '</svg>' +
+        '<i class="co-dust d1"></i><i class="co-dust d2"></i><i class="co-table"></i></div>';
     }
   };
   function sceneX() {
-    if (theme === 'k') return '<div class="sc-x"><i class="ka1"></i><i class="ka2"></i>' + K_LINES + '</div>';
-    if (theme === 'mix') return '<div class="sc-x"><i class="ka1"></i><i class="ka2"></i>' + K_LINES +
+    if (theme === 'neon') return '<div class="sc-x"><i class="ka1"></i><i class="ka2"></i>' + K_LINES +
       '<svg class="x-city" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice">' + cityRects(17, 400, 0, 30, 110, true, 'xc') + '</svg>' +
       '<i class="fog"></i><i class="refl"></i><i class="rain r1"></i><i class="rain r2"></i></div>';
-    if (theme === 'm') return '<div class="sc-x"><i class="fog"></i>' +
-      '<svg class="m-far" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice">' + cityRects(31, 400, 0, 70, 180, true, 'mf') + '</svg>' +
-      '<svg class="m-near" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice">' + cityRects(17, 400, 0, 40, 120, true, 'mn') + '</svg>' +
-      '<i class="sg sg1"></i><i class="sg sg2"></i><i class="sg sg3"></i><i class="sg sgb"></i><i class="street"></i><i class="refl"></i>' +
-      '<i class="rain r1"></i><i class="rain r2"></i></div>';
     if (CARTOON[theme]) return CARTOON_SCENE[theme]();
     return '';
   }
@@ -234,24 +204,18 @@
   var GOLD = ['#F6D78B', '#E8B85A', '#FFF1C8', '#C99232'];
   // монета в характере стиля
   function coinDraw(p, x, y, r, sq) {
-    if (theme === 'k') {
-      // K: светящаяся точка с ореолом и тонким кольцом
-      var kg = ctx.createRadialGradient(x, y, 0, x, y, r * 2.6);
-      kg.addColorStop(0, 'rgba(255,236,190,.55)'); kg.addColorStop(1, 'rgba(255,236,190,0)');
-      ctx.fillStyle = kg; ctx.beginPath(); ctx.arc(x, y, r * 2.6, 0, 6.283); ctx.fill();
-      ctx.strokeStyle = '#F3D98B'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.ellipse(x, y, r * Math.max(0.2, sq), r, 0, 0, 6.283); ctx.stroke();
-      ctx.fillStyle = '#FFF6DE'; ctx.beginPath(); ctx.arc(x, y, r * 0.32, 0, 6.283); ctx.fill();
-      return;
-    }
-    if (theme === 'm' || theme === 'mix') {
-      // M и основной: золотая монета со светящимся шлейфом
-      var mb = theme === 'm' ? cssVar('--biz', '#45E0D8') : '#F2C86A';
-      if (p.lx != null) { ctx.strokeStyle = mb; ctx.globalAlpha *= 0.45; ctx.lineWidth = r * 0.9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(p.lx, p.ly); ctx.lineTo(x, y); ctx.stroke(); ctx.globalAlpha /= 0.45; }
+    if (theme === 'neon') {
+      // неон: золотая монета со светящимся шлейфом
+      if (p.lx != null) { ctx.strokeStyle = '#F2C86A'; ctx.globalAlpha *= 0.45; ctx.lineWidth = r * 0.9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(p.lx, p.ly); ctx.lineTo(x, y); ctx.stroke(); ctx.globalAlpha /= 0.45; }
       p.lx = x; p.ly = y;
       ctx.fillStyle = 'rgba(255,214,120,.25)'; ctx.beginPath(); ctx.arc(x, y, r * 1.9, 0, 6.283); ctx.fill();
       ctx.fillStyle = '#ffd98a'; ctx.beginPath(); ctx.ellipse(x, y, r * Math.max(0.25, sq), r, 0, 0, 6.283); ctx.fill();
       ctx.strokeStyle = '#fff4d0'; ctx.lineWidth = 1; ctx.stroke();
       return;
+    }
+    if (theme === 'main') {
+      // основной: мультяшная монета с тёмным контуром
+      ctx.fillStyle = '#3A2314'; ctx.beginPath(); ctx.ellipse(x, y + 1.5, r * Math.max(0.25, sq) + 1.4, r + 1.4, 0, 0, 6.283); ctx.fill();
     }
     ctx.fillStyle = '#B9771A'; ctx.beginPath(); ctx.ellipse(x, y + 1.2, r * Math.max(0.25, sq), r, 0, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#FFD25A'; ctx.beginPath(); ctx.ellipse(x, y, r * Math.max(0.25, sq), r, 0, 0, 6.283); ctx.fill();
@@ -340,7 +304,8 @@
     // надеть стиль (game.js вызывает с выбором из сохранения); при ?theme=… в адресе — показываем стиль из адреса
     set: function (t) {
       if (forced) t = forced;
-      if (!valid(t)) t = 'mix';
+      t = upgrade(t);
+      if (!valid(t)) t = 'main';
       if (!forced) write(t);
       if (t === theme && root.getAttribute('data-theme') === t) return;
       theme = t; apply(); tgColors(); sceneSync();
@@ -359,29 +324,23 @@
       var c = center(node), biz = cssVar('--biz', '#B9FF3F');
       var cols = rar ? [RAR[rar], '#ffffff', RAR[rar], biz] : [biz, '#ffffff', biz];
       canvas();
-      if (theme === 'k') {
-        // тонкие кольца-обводки и несколько мягких огоньков — сдержанно
-        parts.push({ type: 'ring', x: c.x, y: c.y, r0: c.w * 0.3, r1: c.w * 0.95, c: rar ? RAR[rar] : biz, w: 1.2, t: 0, life: 0.6 });
-        parts.push({ type: 'ring', x: c.x, y: c.y, r0: c.w * 0.2, r1: c.w * 0.7, c: 'rgba(255,255,255,.8)', w: 0.8, t: -0.07, life: 0.55 });
-        if (rar >= 2 || up) parts.push({ type: 'ring', x: c.x, y: c.y, r0: c.w * 0.3, r1: c.w * 1.5, c: rar ? RAR[rar] : biz, w: 0.8, t: -0.14, life: 0.75 });
-        burst(c.x, c.y, rar === 3 ? 18 : 10, rar ? [RAR[rar], '#ffffff'] : [biz, '#ffffff'], 1.4, 'mote', { s: 4, sr: 5, g: 0, up: 0.5, life: 0.7, a: 0.85 });
-        return;
-      }
-      if (theme === 'm') {
-        // неоновое кольцо, «лужа» под сотрудником и брызги
-        parts.push({ type: 'ring', x: c.x, y: c.y, r0: 6, r1: c.w * 0.85, c: rar ? RAR[rar] : biz, w: 2, t: 0, life: 0.5 });
-        parts.push({ type: 'ring', x: c.x, y: c.y + c.h * 0.38, r0: 4, r1: c.w * 0.9, fy: 0.28, c: 'rgba(180,200,255,.8)', w: 1.2, t: 0.02, life: 0.7 });
-        burst(c.x, c.y + c.h * 0.3, rar === 3 ? 22 : 14, rar ? [RAR[rar], '#cfe0ff'] : [biz, '#cfe0ff', '#ffffff'], 3.4, 'drop', { s: 2.5, sr: 2, g: 0.24, up: 1, life: 0.55 });
-        return;
-      }
-      if (theme === 'mix') {
-        // основной: бодро, как в C — вспышка-кольцо, звёзды и брызги по «луже»; легенда — золотой салют
+      if (theme === 'neon') {
+        // неон: вспышка-кольцо, звёзды и брызги по «луже»; легенда — золотой салют
         var gold = rar === 3;
         parts.push({ type: 'ring', x: c.x, y: c.y, r0: 6, r1: c.w * 0.95, c: gold ? '#F6D78B' : rar ? RAR[rar] : biz, w: 3.5, t: 0, life: 0.5 });
         parts.push({ type: 'ring', x: c.x, y: c.y + c.h * 0.36, r0: 4, r1: c.w * 0.85, fy: 0.28, c: 'rgba(200,215,255,.75)', w: 1.4, t: 0.03, life: 0.65 });
         if (up || rar >= 2) parts.push({ type: 'ring', x: c.x, y: c.y, r0: 4, r1: c.w * 1.5, c: '#ffffff', w: 2, t: -0.08, life: 0.7 });
         burst(c.x, c.y, gold ? 34 : up ? 28 : 20, gold ? GOLD.concat('#ffffff') : cols, gold ? 5.6 : 4.6, gold ? 'star' : null);
         burst(c.x, c.y + c.h * 0.3, 8, [biz, '#cfe0ff'], 2.6, 'drop', { s: 2.2, sr: 1.5, g: 0.24, up: 1, life: 0.45 });
+        return;
+      }
+      if (theme === 'collection') {
+        // «Коллекция»: мягкий свет софита — светлое кольцо по подставке, тёплые огоньки и блёстки (у легенды — золото)
+        var cg = rar === 3 ? GOLD : rar ? [RAR[rar], '#ffffff', '#FFF3D6'] : ['#FFF3D6', '#ffffff', '#E8C98A'];
+        parts.push({ type: 'ring', x: c.x, y: c.y + c.h * 0.3, r0: 4, r1: c.w * 0.8, fy: 0.3, c: rar === 3 ? '#E8B85A' : 'rgba(255,255,255,.95)', w: 2.4, t: 0, life: 0.6 });
+        parts.push({ type: 'ring', x: c.x, y: c.y, r0: c.w * 0.2, r1: c.w * 0.9, c: rar ? cg[0] : 'rgba(232,201,138,.9)', w: 1.6, t: 0.02, life: 0.55 });
+        burst(c.x, c.y, rar === 3 ? 22 : 14, cg, 1.8, 'mote', { s: 4, sr: 5, g: 0, up: 0.6, life: 0.75, a: 0.9 });
+        burst(c.x, c.y, rar === 3 ? 18 : 10, cg, 3.6, 'star', { s: 1.8, sr: 2, g: 0.06, life: 0.5 });
         return;
       }
       if (CARTOON[theme]) {
@@ -420,26 +379,25 @@
       if (!node || reduce) return;
       var c = center(node), bz = cssVar('--biz', '#B9FF3F');
       canvas();
-      if (theme === 'k') { parts.push({ type: 'ring', x: c.x, y: c.y, r0: c.w * 0.2, r1: c.w * 0.6, c: bz, w: 1, t: 0, life: 0.45 }); kick(); return; }
-      if (theme === 'm' || theme === 'mix') {
+      if (theme === 'neon') {
         parts.push({ type: 'ring', x: c.x, y: c.y + c.h * 0.36, r0: 3, r1: c.w * 0.5, fy: 0.3, c: 'rgba(190,210,255,.85)', w: 1.2, t: 0, life: 0.6 });
-        if (theme === 'mix') burst(c.x, c.y + c.h * 0.3, 6, [bz, '#ffffff'], 2.2, 'drop', { s: 2, sr: 1.5, g: 0.24, up: 1, life: 0.4 });
+        burst(c.x, c.y + c.h * 0.3, 6, [bz, '#ffffff'], 2.2, 'drop', { s: 2, sr: 1.5, g: 0.24, up: 1, life: 0.4 });
         kick(); return;
       }
+      if (theme === 'collection') { parts.push({ type: 'ring', x: c.x, y: c.y + c.h * 0.3, r0: 3, r1: c.w * 0.45, fy: 0.3, c: 'rgba(255,255,255,.95)', w: 1.6, t: 0, life: 0.5 }); kick(); return; }
       burst(c.x, c.y + c.h * 0.25, 10, [bz, '#ffffff'], 3);
     },
     unlock: function (node) {
       if (!node || reduce) return;
       var c = center(node);
       canvas();
-      if (theme === 'k' || theme === 'mix') { parts.push({ type: 'ring', x: c.x, y: c.y, r0: 6, r1: c.w, c: '#F3D98B', w: 1.6, t: 0, life: 0.7 }); return burst(c.x, c.y, 16, ['#F3D98B', '#ffffff', '#E8B85A'], 1.6, 'mote', { s: 4, sr: 5, g: 0, life: 0.8 }); }
-      if (theme === 'm') return burst(c.x, c.y, 18, ['#FFD98A', '#cfe0ff', cssVar('--biz', '#45E0D8')], 3.4, 'drop', { s: 2.5, sr: 2, g: 0.24, up: 1, life: 0.6 });
+      if (theme === 'neon' || theme === 'collection') { parts.push({ type: 'ring', x: c.x, y: c.y, r0: 6, r1: c.w, c: '#F3D98B', w: 1.6, t: 0, life: 0.7 }); return burst(c.x, c.y, 16, ['#F3D98B', '#ffffff', '#E8B85A'], 1.6, 'mote', { s: 4, sr: 5, g: 0, life: 0.8 }); }
       parts.push({ type: 'ring', x: c.x, y: c.y, r0: 6, r1: c.w, c: '#FFC83D', t: 0, life: 0.6 });
       burst(c.x, c.y, 24, ['#FFC83D', '#ffffff', cssVar('--biz', '#B9FF3F')], 4.5, 'star');
     },
     // аврал: крупная надпись в своём стиле
     rush: function () {
-      var t = { mix: 'Аврал <b>×2</b>', k: 'Аврал <b>×2</b>', m: '<i>残業</i>Аврал ×2', ca: 'Аврал <b>×2</b>', cb: 'Аврал <b>×2</b>', cc: 'Аврал <b>×2</b>' }[theme];
+      var t = { main: 'Аврал <b>×2</b>', neon: 'Аврал <b>×2</b>', collection: 'Аврал <b>×2</b>' }[theme];
       if (!t) return;
       floatEl(window.innerWidth / 2, window.innerHeight * 0.42, t, 'rushx');
     }

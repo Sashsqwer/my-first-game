@@ -1,0 +1,224 @@
+/* «Стартап с нуля» — платный комплект «Коллекция» (data-theme="collection"): оформление под 3D-фигурки
+   (картинки — app/img/staff/collection/, пока их нет — SVG). Открывается за ⭐ 150 (B.SKINS).
+   Идея: витрина коллекционера в мягком студийном свете. Фон — светлая «циклорама» с софитами сверху и полками
+   с коробками и колпаками (в лёгком расфокусе); доска — шкаф-витрина в ореховой раме; клетки — ниши с подсветкой,
+   сотрудник стоит на круглой подставке, имя — латунная табличка; редкость — цвет подставки (синий/фиолетовый акрил, золото).
+   Основа раскладки — общая «мультяшная» (html[data-cartoon], themes-main.css): здесь вместо толстого контура —
+   тонкие линии (--ln) и мягкие тени (--lip + размытие --lb), тексты тёмные без обводки, заголовки — антиквой.
+   Анимации — только transform/opacity; при prefers-reduced-motion выключены. */
+
+html[data-theme="collection"] {
+  --ink: #2B2420; --bg: #e9e3da; --text: #2B2420; --muted: #6A5E54; --dim: #7E7268;
+  --card: #FFFDFA; --card-2: #F6F1EA; --line: rgba(70, 50, 30, .14); --accent: #1F8A66; --accent-ink: #fff;
+  --ln: rgba(70, 50, 30, .13); --lip: rgba(70, 45, 20, .16); --lb: 12px; --bw: 1px;
+  --outline: 0 1px 0 rgba(255, 255, 255, .55); --outline-s: 0 1px 0 rgba(255, 255, 255, .45);
+  --hi: inset 0 1px 0 rgba(255, 255, 255, .95);
+  --drop: 0 6px 16px -6px rgba(70, 45, 20, .28), 0 1px 2px rgba(70, 45, 20, .08);
+  --pan: linear-gradient(180deg, #FFFFFF 0%, #F7F2EB 100%); --pan-2: #FFFDFA; --pill: rgba(255, 255, 255, .9); --hint: #6A5E54;
+  --sheet: linear-gradient(180deg, #FFFFFF 0%, #F4EEE5 100%); --tabbar: rgba(255, 253, 250, .94);
+  --go1: #3DBE90; --go2: #1C8763; --bl1: #F6DA9A; --bl2: #D29E45; --gd1: #F8E2A6; --gd2: #D3A04A;
+  --rare: #3E8FE0; --epic: #9A5CE6; --legend: #D7A23C;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --brass: linear-gradient(180deg, #F3E2B4 0%, #D9B66C 55%, #B88F45 100%);
+  --walnut: #6E4A2E;
+}
+
+/* ---------- Сцена: студийный фон, софиты, полки, стол ---------- */
+html[data-theme="collection"] .sc-wall { background: color-mix(in srgb, var(--t1) 7%, #EEE8E0); }
+html[data-theme="collection"] .co-wall { inset: 0; background:
+  radial-gradient(ellipse 95% 42% at 50% -4%, rgba(255, 255, 255, .95), transparent 72%),
+  linear-gradient(180deg, color-mix(in srgb, var(--t1) 6%, #F3EEE7) 0%, #E8E0D5 58%, #D9CEC0 100%); }
+html[data-theme="collection"] .co-spot { top: -6%; width: 62%; height: 78%; pointer-events: none; opacity: .85;
+  background: radial-gradient(ellipse 46% 100% at 50% 0%, rgba(255, 249, 236, .9), rgba(255, 249, 236, .25) 45%, transparent 72%); }
+html[data-theme="collection"] .co-spot.s1 { left: -14%; transform: rotate(9deg); transform-origin: 50% 0; }
+html[data-theme="collection"] .co-spot.s2 { right: -14%; transform: rotate(-9deg); transform-origin: 50% 0; }
+html[data-theme="collection"] .co-shelf { width: 210px; height: auto; filter: blur(.8px); opacity: .92; }
+html[data-theme="collection"] .co-shelf.sf1 { left: -36px; top: calc(16% + var(--safe-t)); }
+html[data-theme="collection"] .co-shelf.sf2 { right: -58px; top: 41%; }
+html[data-theme="collection"] .co-shelf .sh-b { fill: var(--walnut); }
+html[data-theme="collection"] .co-shelf .sh-u { fill: #4A3020; opacity: .55; }
+html[data-theme="collection"] .co-shelf .bx { stroke: rgba(70, 45, 20, .25); stroke-width: 1; }
+html[data-theme="collection"] .co-shelf .bx.b0 { fill: #EBC3C3; }
+html[data-theme="collection"] .co-shelf .bx.b1 { fill: #B9D3EA; }
+html[data-theme="collection"] .co-shelf .bx.b2 { fill: #F0D597; }
+html[data-theme="collection"] .co-shelf .bx-w { fill: rgba(255, 255, 255, .6); }
+html[data-theme="collection"] .co-shelf .jar { fill: rgba(255, 255, 255, .38); stroke: rgba(255, 255, 255, .95); stroke-width: 1.4; }
+html[data-theme="collection"] .co-shelf .jar-h { stroke: #fff; stroke-width: 2; stroke-linecap: round; opacity: .8; fill: none; }
+html[data-theme="collection"] .co-shelf .pd-s { fill: #FBF7F0; stroke: #C9BAA6; stroke-width: 1; }
+html[data-theme="collection"] .co-shelf .fg { fill: color-mix(in srgb, var(--t1) 45%, #B6A28B); }
+html[data-theme="collection"] .co-dust { inset: 0; pointer-events: none; opacity: .55; will-change: transform;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, .95) 0 1.2px, transparent 1.8px), radial-gradient(circle, rgba(255, 240, 205, .9) 0 1px, transparent 1.6px);
+  background-size: 160px 210px, 110px 170px; background-position: 20px 30px, 70px 90px; animation: coDust 22s linear infinite; }
+html[data-theme="collection"] .co-dust.d2 { opacity: .35; background-size: 230px 260px, 140px 200px; animation-duration: 34s; animation-direction: reverse; }
+@keyframes coDust { to { transform: translateY(-60px); } }
+html[data-theme="collection"] .co-table { left: 0; right: 0; bottom: 0; height: 11%;
+  background: linear-gradient(180deg, #CDBDA8 0 2px, #EDE5DA 2px, #DCD0C1 100%); box-shadow: 0 -10px 24px -12px rgba(70, 45, 20, .35); }
+
+/* ---------- Шапка ---------- */
+html[data-theme="collection"] .money { color: var(--text); font-family: var(--serif); font-weight: 700; font-size: 37px; letter-spacing: -.5px; text-shadow: 0 1px 0 #fff; padding: 2px 4px 2px 3px; }
+html[data-theme="collection"] .coin-big { border: 0; box-shadow: 0 4px 10px -3px rgba(120, 80, 20, .55), inset 0 -3px 0 rgba(150, 90, 10, .35), inset 0 2px 0 rgba(255, 255, 255, .7); }
+html[data-theme="collection"] .icon-btn { border-radius: 50%; background: linear-gradient(180deg, #fff, #F3EDE4); border-color: rgba(70, 50, 30, .1); }
+html[data-theme="collection"] .icon-btn:active { transform: translateY(1px) scale(.97); }
+html[data-theme="collection"] .ti .o { stroke-width: 1.3; }
+html[data-theme="collection"] { --ic-o: rgba(60, 40, 25, .65); }
+html[data-theme="collection"] .dot, html[data-theme="collection"] .tab-dot { background: #E0475A; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+html[data-theme="collection"] .rate { font-weight: 700; }
+html[data-theme="collection"] .rate b { color: #1C8763; }
+html[data-theme="collection"] .chip { font-weight: 700; }
+html[data-theme="collection"] .chip-room { color: #fff; background: linear-gradient(180deg, #8A6243, var(--walnut)); text-shadow: 0 1px 0 rgba(0, 0, 0, .3); box-shadow: 0 4px 10px -4px rgba(70, 45, 20, .5), inset 0 1px 0 rgba(255, 255, 255, .25); }
+html[data-theme="collection"][data-biz="delivery"] .chip-room { text-shadow: 0 1px 0 rgba(0, 0, 0, .3); }
+html[data-theme="collection"] .invite-banner { background: linear-gradient(180deg, #FFFBF1, #F6E8C8); color: #3A2A12; border-color: rgba(160, 120, 40, .25); }
+html[data-theme="collection"] .invite-banner .ib-t small { color: #6E5A36; }
+html[data-theme="collection"] .invite-banner .ib-ico { border: 0; background: var(--brass); }
+html[data-theme="collection"] .invite-banner .ib-p { border-color: rgba(70, 50, 30, .15); }
+
+/* ---------- Доска — шкаф-витрина в ореховой раме ---------- */
+html[data-theme="collection"] .board { border: 3px solid var(--walnut); border-radius: 20px;
+  background: radial-gradient(ellipse 80% 22% at 50% 0%, rgba(255, 252, 240, .95), transparent 75%), linear-gradient(180deg, #FAF6F0 0%, #EEE6DA 100%);
+  box-shadow: 0 0 0 3px #7C5536, 0 0 0 4px #4E321E, 0 22px 34px -14px rgba(60, 35, 15, .55), inset 0 2px 0 rgba(255, 255, 255, .25), inset 0 0 0 1px rgba(255, 255, 255, .6), inset 0 10px 18px -10px rgba(70, 45, 20, .35); }
+html[data-theme="collection"] .need { border-color: rgba(70, 50, 30, .1); background: #fff; }
+html[data-theme="collection"] .need .nt { font-weight: 700; }
+html[data-theme="collection"] .need .nb { border: 0; background: rgba(70, 50, 30, .1); }
+html[data-theme="collection"] .need .nb b { background: linear-gradient(90deg, #4FCB9D, #1C8763); }
+html[data-theme="collection"] .need.low .nb b { background: linear-gradient(90deg, #F5C86A, #D99530); }
+html[data-theme="collection"] .need.bad { background: #FFF1F1; border-color: rgba(220, 70, 90, .35); }
+html[data-theme="collection"] .need.bad .nb b { background: linear-gradient(90deg, #F08A98, #D63A50); }
+
+/* Клетка — ниша витрины: светлый короб, сверху свет, сотрудник на круглой подставке */
+html[data-theme="collection"] .cell { border: 1px solid rgba(70, 50, 30, .12); border-radius: 14px;
+  background: radial-gradient(ellipse 70% 50% at 50% 0%, #FFFFFF, transparent 75%), linear-gradient(180deg, #FFFEFC 0%, #F1EAE0 100%);
+  box-shadow: 0 6px 12px -8px rgba(70, 45, 20, .45), inset 0 7px 12px -9px rgba(70, 45, 20, .35), inset 0 -1px 0 rgba(255, 255, 255, .9); }
+html[data-theme="collection"] .cell:not(.empty):not(.locked):not(.pop)::after { content: ""; position: absolute; left: 22%; right: 22%; top: -1px; height: 3px; border-radius: 0 0 4px 4px; z-index: 1; pointer-events: none;
+  background: rgba(255, 248, 230, .95); box-shadow: 0 2px 10px 2px rgba(255, 240, 200, .9); }
+html[data-theme="collection"] .cell .pd { display: block; position: absolute; left: 17%; right: 17%; bottom: 10%; height: 15%; border-radius: 50%; z-index: 1;
+  background: linear-gradient(180deg, #FFFFFF 0%, #E8DFD3 60%, #CFC2B1 100%); box-shadow: 0 4px 6px -2px rgba(70, 45, 20, .4), inset 0 -2px 0 rgba(150, 130, 105, .45); }
+html[data-theme="collection"] .cell .em .av { filter: drop-shadow(0 3px 3px rgba(60, 35, 15, .3)); }
+html[data-theme="collection"] .cell .nm { bottom: -5px; color: #3A2A12; background: var(--brass); border-radius: 4px; font-weight: 800; letter-spacing: .1px;
+  box-shadow: 0 2px 4px rgba(70, 45, 20, .35), inset 0 1px 0 rgba(255, 255, 255, .6); }
+html[data-theme="collection"] .cell .lv { color: #fff; border: 2px solid #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, .3); box-shadow: 0 2px 5px rgba(60, 35, 15, .35); }
+html[data-theme="collection"] .cell .rt { border: 1.5px solid #fff; text-shadow: none; font-weight: 800; box-shadow: 0 2px 5px rgba(60, 35, 15, .3); }
+html[data-theme="collection"] .cell.r3 .rt { background: var(--brass); color: #3A2A12; }
+html[data-theme="collection"] .cell.r1 { border-color: rgba(62, 143, 224, .55); box-shadow: 0 6px 14px -8px rgba(62, 143, 224, .8), inset 0 7px 12px -9px rgba(70, 45, 20, .35), 0 0 0 1.5px rgba(62, 143, 224, .35); }
+html[data-theme="collection"] .cell.r2 { border-color: rgba(154, 92, 230, .55); box-shadow: 0 6px 14px -8px rgba(154, 92, 230, .8), inset 0 7px 12px -9px rgba(70, 45, 20, .35), 0 0 0 1.5px rgba(154, 92, 230, .35); }
+html[data-theme="collection"] .cell.r3 { border-color: rgba(215, 162, 60, .7);
+  background: radial-gradient(ellipse 75% 55% at 50% 0%, #FFF8E2, transparent 75%), linear-gradient(180deg, #FFFDF6 0%, #F6EBD2 100%);
+  box-shadow: 0 6px 16px -6px rgba(215, 162, 60, .9), inset 0 7px 12px -9px rgba(110, 70, 10, .4), 0 0 0 1.5px rgba(215, 162, 60, .5); }
+html[data-theme="collection"] .cell.r1 .pd { background: linear-gradient(180deg, #E4F1FF 0%, #8CC0F2 55%, #3E8FE0 100%); box-shadow: 0 4px 8px -2px rgba(62, 143, 224, .6), inset 0 -2px 0 rgba(20, 70, 140, .35); }
+html[data-theme="collection"] .cell.r2 .pd { background: linear-gradient(180deg, #F2E8FF 0%, #C29BF2 55%, #9A5CE6 100%); box-shadow: 0 4px 8px -2px rgba(154, 92, 230, .6), inset 0 -2px 0 rgba(80, 30, 150, .35); }
+html[data-theme="collection"] .cell.r3 .pd { background: linear-gradient(180deg, #FFF6D8 0%, #EDCB7C 50%, #C08A2E 100%); box-shadow: 0 4px 10px -2px rgba(215, 162, 60, .8), inset 0 -2px 0 rgba(120, 75, 10, .4); }
+html[data-theme="collection"] .cell.pair:not(.r1):not(.r2):not(.r3) { box-shadow: 0 6px 12px -8px rgba(70, 45, 20, .45), inset 0 7px 12px -9px rgba(70, 45, 20, .35), 0 0 0 2px rgba(31, 138, 102, .45); }
+html[data-theme="collection"] .cell.can-merge { border-color: #1F8A66; box-shadow: 0 0 0 3px rgba(61, 190, 144, .75), 0 0 20px 4px rgba(61, 190, 144, .45); }
+html[data-theme="collection"] .cell.over { border-color: #1F8A66; }
+html[data-theme="collection"] .ghost { box-shadow: 0 0 0 3px rgba(61, 190, 144, .8), 0 14px 22px rgba(60, 35, 15, .3) !important; border-color: #1F8A66 !important; }
+html[data-theme="collection"] .cell .cd { border: 0; background: rgba(70, 50, 30, .15); }
+html[data-theme="collection"] .cell.empty { background: linear-gradient(180deg, rgba(70, 50, 30, .05), rgba(70, 50, 30, .02)); border: 1.5px dashed rgba(70, 50, 30, .22); box-shadow: inset 0 6px 10px -8px rgba(70, 45, 20, .3); }
+html[data-theme="collection"] .cell.empty .pd { display: block; left: 24%; right: 24%; opacity: .45; box-shadow: none; }
+html[data-theme="collection"] .cell.locked { border: 1.5px dashed rgba(70, 50, 30, .25); background: rgba(255, 255, 255, .35); color: #6A5E54; }
+html[data-theme="collection"] .cell.locked .nm { color: #5A4E44; background: none; box-shadow: none; }
+html[data-theme="collection"] .cell.lk-star { color: #B07A1A; }
+html[data-theme="collection"] .cell.lk-friend { color: #2D74BE; }
+html[data-theme="collection"] .next-room { border-color: rgba(70, 50, 30, .1); background: #fff; font-weight: 600; }
+html[data-theme="collection"] .next-room .bar { border: 0; background: rgba(70, 50, 30, .1); }
+html[data-theme="collection"] .next-room .bar i { background: linear-gradient(90deg, #E7C47A, #B88F45); }
+html[data-theme="collection"] .next-room.ready { box-shadow: var(--drop), 0 0 0 2px #D7A23C; }
+html[data-theme="collection"] .next-room.ready b { color: #8A5E10; }
+html[data-theme="collection"] .hint { color: var(--muted); font-weight: 600; text-shadow: 0 1px 0 rgba(255, 255, 255, .7); }
+
+/* ---------- Кнопки: матовые, мягкая тень; найм — изумруд, аврал — латунь ---------- */
+html[data-theme="collection"] .btn { border: 0; border-radius: 18px; font-weight: 800; text-shadow: 0 1px 0 rgba(0, 0, 0, .18);
+  box-shadow: 0 10px 20px -10px rgba(40, 25, 10, .55), inset 0 -3px 0 rgba(0, 0, 0, .12), inset 0 1px 0 rgba(255, 255, 255, .45); }
+html[data-theme="collection"] .btn::before { opacity: .55; }
+html[data-theme="collection"] .btn:active { transform: translateY(2px); box-shadow: 0 4px 10px -6px rgba(40, 25, 10, .5), inset 0 -2px 0 rgba(0, 0, 0, .12); }
+html[data-theme="collection"] .btn-primary .cost { color: #FFF1C9; }
+html[data-theme="collection"] .btn-primary.full, html[data-theme="collection"] .btn-rush { background: linear-gradient(180deg, #F4EFE8, #DED5C9); color: #5A4E44; text-shadow: none; }
+html[data-theme="collection"] .btn-dark { background: linear-gradient(180deg, #4A3A30, #2B2420); }
+html[data-theme="collection"] .btn-ghost { background: #fff; color: var(--text); box-shadow: 0 0 0 1px rgba(70, 50, 30, .14), 0 6px 14px -10px rgba(40, 25, 10, .5); }
+html[data-theme="collection"] .btn-rush.ready { background: linear-gradient(180deg, var(--bl1), var(--bl2)); color: #3A2A12; text-shadow: 0 1px 0 rgba(255, 255, 255, .4); }
+html[data-theme="collection"] .btn-rush.on { background: linear-gradient(180deg, #3DBE90, #1C8763); color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, .2); }
+html[data-theme="collection"] .buy.glow::after, html[data-theme="collection"] .btn.glow::after { border-color: #D7A23C; border-width: 2px; }
+
+/* ---------- Нижнее меню ---------- */
+html[data-theme="collection"] .tabbar { border: 1px solid rgba(70, 50, 30, .1); border-radius: 24px; box-shadow: 0 12px 28px -12px rgba(50, 30, 10, .5), var(--hi); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+html[data-theme="collection"] .tab { font-weight: 700; color: #7A6E64; }
+html[data-theme="collection"] .tab span { font-weight: 700; }
+html[data-theme="collection"] .tab.active { color: var(--text); background: linear-gradient(180deg, #FBF6EE, #F1E7D7); box-shadow: inset 0 0 0 1px rgba(160, 120, 50, .3), 0 3px 8px -4px rgba(70, 45, 20, .4); }
+
+/* ---------- Экраны-списки, карточки, окна ---------- */
+html[data-theme="collection"] .view-title { color: var(--text); font-family: var(--serif); font-weight: 700; font-size: 25px; text-shadow: 0 1px 0 #fff; }
+html[data-theme="collection"] .sub-title { color: var(--text); font-family: var(--serif); font-weight: 700; text-shadow: 0 1px 0 rgba(255, 255, 255, .8); }
+html[data-theme="collection"] .card, html[data-theme="collection"] .pack, html[data-theme="collection"] .stat, html[data-theme="collection"] .lb,
+html[data-theme="collection"] .hero-card, html[data-theme="collection"] .soon { border-radius: 16px; }
+html[data-theme="collection"] .card .t small, html[data-theme="collection"] .acc, html[data-theme="collection"] .req .ok,
+html[data-theme="collection"] .stat b, html[data-theme="collection"] .lb b { color: #1C7A5A; }
+html[data-theme="collection"] .card .ico, html[data-theme="collection"] .pack-ico { border: 0; border-radius: 12px; background: linear-gradient(180deg, #fff, #F1E9DD); box-shadow: inset 0 0 0 1px rgba(70, 50, 30, .1), 0 3px 8px -4px rgba(70, 45, 20, .35); }
+html[data-theme="collection"] .card .buy, html[data-theme="collection"] .pack .buy, html[data-theme="collection"] .step .buy { border: 0; border-radius: 12px; text-shadow: 0 1px 0 rgba(0, 0, 0, .18);
+  box-shadow: 0 6px 12px -6px rgba(28, 135, 99, .7), inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -2px 0 rgba(0, 0, 0, .12); }
+html[data-theme="collection"] .card .buy.poor, html[data-theme="collection"] .pack .buy.poor { background: linear-gradient(180deg, #F4EFE8, #E0D7CB); color: #6A5E54; text-shadow: none; box-shadow: inset 0 0 0 1px rgba(70, 50, 30, .1); }
+html[data-theme="collection"] .card .buy.max { color: #1C7A5A; }
+html[data-theme="collection"] .pack .buy.soon-btn, html[data-theme="collection"] .card .buy.soon-btn { border: 0; background: var(--brass); color: #3A2A12; }
+html[data-theme="collection"] .card.cur, html[data-theme="collection"] .lb.me { box-shadow: var(--drop), 0 0 0 2px #D7A23C; }
+html[data-theme="collection"] .pack.p-free { box-shadow: var(--drop), 0 0 0 2px rgba(31, 138, 102, .55); }
+html[data-theme="collection"] .pack.p-premium { background: linear-gradient(180deg, #FFFFFF, #E9F2FC); box-shadow: var(--drop), 0 0 0 2px rgba(62, 143, 224, .5); }
+html[data-theme="collection"] .pack.p-premium .pack-ico { background: linear-gradient(180deg, #E4F1FF, #9CC8F2); }
+html[data-theme="collection"] .pack.p-star { background: linear-gradient(180deg, #FFFDF5, #F6E9C8); box-shadow: var(--drop), 0 0 0 2px rgba(215, 162, 60, .7); }
+html[data-theme="collection"] .pack.p-star .pack-ico { background: var(--brass); }
+html[data-theme="collection"] .odds, html[data-theme="collection"] .qbar, html[data-theme="collection"] .ladder-line { border: 0; background: rgba(70, 50, 30, .1); }
+html[data-theme="collection"] .qbar i, html[data-theme="collection"] .ladder-line i { background: linear-gradient(90deg, #4FCB9D, #1C8763); }
+html[data-theme="collection"] .l1 { color: #2D74BE; } html[data-theme="collection"] .l2 { color: #7A3FC8; } html[data-theme="collection"] .l3 { color: #9A6A14; }
+html[data-theme="collection"] .shards .pips i { border: 0; background: rgba(70, 50, 30, .12); }
+html[data-theme="collection"] .note-box { border: 1px dashed rgba(70, 50, 30, .25); background: rgba(255, 255, 255, .7); }
+html[data-theme="collection"] .seg { border: 1px solid rgba(70, 50, 30, .12); }
+html[data-theme="collection"] .seg button.on { border: 0; color: #fff; background: linear-gradient(180deg, #4A3A30, #2B2420); }
+html[data-theme="collection"] .step .st-ico, html[data-theme="collection"] .path span, html[data-theme="collection"] .staff-row div { border: 1px solid rgba(70, 50, 30, .15); }
+html[data-theme="collection"] .step.claimed .st-ico { border: 0; }
+html[data-theme="collection"] .modal { background: rgba(45, 32, 22, .5); }
+html[data-theme="collection"] .sheet { border: 0; border-radius: 26px; box-shadow: 0 26px 50px -18px rgba(40, 25, 10, .6), 0 0 0 1px rgba(70, 50, 30, .08), var(--hi); }
+html[data-theme="collection"] .sheet h2 { color: var(--text); font-family: var(--serif); font-weight: 700; font-size: 24px; text-shadow: none; }
+html[data-theme="collection"] .sheet .amount { color: #A0701C; font-family: var(--serif); font-weight: 700; text-shadow: 0 1px 0 #fff, 0 6px 18px rgba(215, 162, 60, .35); }
+html[data-theme="collection"] .sheet .quote { border: 1px solid rgba(160, 120, 40, .25); background: #FFF9EC; }
+html[data-theme="collection"] .sheet .warn { color: #A85008; }
+html[data-theme="collection"] .streak div { border: 1px solid rgba(70, 50, 30, .12); }
+html[data-theme="collection"] .streak .done { background: #E4F4EC; color: #1C7A5A; }
+html[data-theme="collection"] .streak .today { background: linear-gradient(180deg, #3DBE90, #1C8763); text-shadow: none; border: 0; }
+html[data-theme="collection"] .streak .d7 { background: linear-gradient(180deg, #F6EEFF, #DCC6FA); box-shadow: 0 0 0 2px rgba(154, 92, 230, .5); }
+html[data-theme="collection"] .rc-back { border: 0; background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .35), transparent 60%), repeating-linear-gradient(135deg, #7A5233 0 8px, #6A4529 8px 16px);
+  box-shadow: inset 0 0 0 3px #D9B66C, 0 10px 20px -8px rgba(40, 25, 10, .6); }
+html[data-theme="collection"] .rc-front { border: 0; background: radial-gradient(ellipse 80% 50% at 50% 0%, #fff, transparent 70%), linear-gradient(180deg, #FFFEFB, #F0E8DC);
+  box-shadow: inset 0 0 0 1px rgba(70, 50, 30, .12), 0 10px 20px -8px rgba(40, 25, 10, .5); }
+html[data-theme="collection"] .rc-front .lv { color: #1C7A5A; }
+html[data-theme="collection"] .rc.r1 .rc-front { box-shadow: 0 0 0 2px var(--rare), 0 10px 22px -8px rgba(62, 143, 224, .7); }
+html[data-theme="collection"] .rc.r2 .rc-front { box-shadow: 0 0 0 2px var(--epic), 0 10px 22px -8px rgba(154, 92, 230, .7); }
+html[data-theme="collection"] .rc.r3 .rc-front { background: linear-gradient(180deg, #FFFDF4, #F5E6BF); box-shadow: 0 0 0 2px var(--legend), 0 0 26px rgba(215, 162, 60, .6); }
+html[data-theme="collection"] .rc-front .rt { border: 0; }
+html[data-theme="collection"] .toast { border: 0; background: #2B2420; color: #FBF6EE; font-weight: 700; box-shadow: 0 12px 24px -10px rgba(40, 25, 10, .6); }
+html[data-theme="collection"] .tip { background: #FFFBF1; color: var(--text); border: 1px solid rgba(160, 120, 40, .3); box-shadow: 0 12px 26px -10px rgba(40, 25, 10, .55); }
+html[data-theme="collection"] .tip .n { background: var(--brass); color: #3A2A12; }
+html[data-theme="collection"] .tip.down::after { border-top-color: #FFFBF1; }
+html[data-theme="collection"] .tip.up::after { border-bottom-color: #FFFBF1; }
+html[data-theme="collection"] .bubble { border: 0; box-shadow: 0 6px 14px -6px rgba(40, 25, 10, .5); }
+html[data-theme="collection"] .float { color: #A0701C; font-family: var(--serif); text-shadow: 0 1px 0 #fff, 0 0 10px rgba(255, 255, 255, .9); }
+html[data-theme="collection"] .float.lvl { background: var(--brass); color: #3A2A12; border: 0; box-shadow: 0 6px 12px -6px rgba(120, 80, 20, .7); font-family: inherit; }
+html[data-theme="collection"] .float.up { color: #1C7A5A; text-shadow: 0 1px 0 #fff; }
+html[data-theme="collection"] .tfloat { color: #8A5E10; text-shadow: 0 1px 0 #fff, 0 0 6px rgba(255, 255, 255, .95); }
+html[data-theme="collection"] .tfloat .tcoin { border: 0; }
+html[data-theme="collection"] .rushx { color: var(--text); font-family: var(--serif); font-weight: 700; text-shadow: 0 1px 0 #fff, 0 8px 26px rgba(215, 162, 60, .55); }
+html[data-theme="collection"] .rushx b { color: #B07A1A; }
+html[data-theme="collection"] .error-box { border: 1px solid rgba(214, 58, 80, .3); background: #FFF1F1; }
+
+/* ---------- Выбор бизнеса ---------- */
+html[data-theme="collection"] .choose-head .logo { border: 0; background: var(--brass); box-shadow: 0 12px 24px -10px rgba(120, 80, 20, .7), inset 0 1px 0 rgba(255, 255, 255, .7); }
+html[data-theme="collection"] .choose h1 { color: var(--text); font-family: var(--serif); font-weight: 700; text-shadow: 0 1px 0 #fff; }
+html[data-theme="collection"] .choose h1 span { color: #A0701C; }
+html[data-theme="collection"] .choose-head p, html[data-theme="collection"] .choose-foot { color: var(--muted); font-weight: 600; text-shadow: none; }
+html[data-theme="collection"] .biz { border: 1px solid rgba(70, 50, 30, .1); background: linear-gradient(180deg, #FFFFFF, color-mix(in srgb, var(--t3) 45%, #FBF7F1)); box-shadow: var(--drop), var(--hi); }
+html[data-theme="collection"] .biz .bi { border: 0; border-radius: 50%; box-shadow: 0 6px 10px -4px rgba(70, 45, 20, .45), inset 0 2px 0 rgba(255, 255, 255, .5), inset 0 -3px 0 rgba(0, 0, 0, .12); }
+html[data-theme="collection"] .sk { border-color: rgba(70, 50, 30, .12); }
+html[data-theme="collection"] .sk.on { box-shadow: var(--drop), 0 0 0 2px #D7A23C; }
+html[data-theme="collection"] .sk-on { color: #1C7A5A; }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="collection"] .co-dust { animation: none; }
+}
+@media (max-width: 350px) {
+  html[data-theme="collection"] .money { font-size: 32px; }
+}
