@@ -122,7 +122,7 @@
 | Обложка для ссылок og:image 1200×630 | 🔧 нарисована кодом: `app/img/og.png` (`node tools/og.js`) |
 | Иконки (180 и 512 px), favicon | 🔧 `app/img/icon-*.png` + прежний значок |
 | theme-color, зум и выделение выключены, долгое нажатие не мешает | ✅ |
-| Версии `?v=` у css/js | 🔧 подняты (style 7, themes 7, themes4 3, main 3, theme 8, balance 5, content 6, avatars 6, net 2, game 7) |
+| Версии `?v=` у css/js | 🔧 подняты в 0.6 (style 8, themes 8, themes-main 4, themes-neon 1, themes-collection 1, theme 11, balance 6, content 7, avatars 8, net 2, game 8) |
 
 ## 9. Безопасность и честность
 
