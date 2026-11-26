@@ -242,6 +242,7 @@ html[data-cartoon] .sk-on { color: var(--t2); }
   html[data-cartoon] .money { font-size: 31px; }
   html[data-cartoon] .icon-btn { width: 37px; height: 37px; }
   html[data-cartoon] .btn { font-size: 15px; }
+  html[data-cartoon] .tab span { font-size: 9.5px; letter-spacing: -.3px; }
   html[data-cartoon] .cell .lv { width: 19px; height: 19px; font-size: 11px; top: -5px; left: -5px; }
 }
 
@@ -313,7 +314,7 @@ html[data-theme="cb"] .sc-wall { background: color-mix(in srgb, var(--t1) 28%, #
 html[data-theme="cb"] .cb-wall { inset: 0; background:
   repeating-linear-gradient(90deg, transparent 0 26px, color-mix(in srgb, var(--t1) 22%, transparent) 26px 40px),
   radial-gradient(ellipse 80% 40% at 50% 15%, rgba(255, 255, 255, .55), transparent 70%); }
-html[data-theme="cb"] .cb-win { left: 50%; top: calc(4px + var(--safe-t)); width: 340px; margin-left: -170px; height: auto; opacity: .8; }
+html[data-theme="cb"] .cb-win { right: -44px; top: calc(36px + var(--safe-t)); width: 250px; height: auto; opacity: .85; }
 html[data-theme="cb"] .cb-win .wf { fill: #fff; stroke: var(--ink); stroke-width: 4; }
 html[data-theme="cb"] .cb-win .sky { fill: #8ED3FF; stroke: var(--ink); stroke-width: 3; }
 html[data-theme="cb"] .cb-win .wc { fill: #BFE4FA; stroke: #6FB4DE; stroke-width: 1.5; }

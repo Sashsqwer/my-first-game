@@ -384,6 +384,15 @@
         burst(c.x, c.y + c.h * 0.3, 8, [biz, '#cfe0ff'], 2.6, 'drop', { s: 2.2, sr: 1.5, g: 0.24, up: 1, life: 0.45 });
         return;
       }
+      if (CARTOON[theme]) {
+        // мультяшный «бум»: кольцо с тёмным контуром и звёзды цвета бизнеса и золота
+        var t1 = cssVar('--t1', biz), ink = cssVar('--ink', '#1D2A4D'), rc = rar === 3 ? '#FFC21A' : rar ? RAR[rar] : t1;
+        parts.push({ type: 'ring', x: c.x, y: c.y, r0: 8, r1: c.w * 0.95, c: ink, w: 7, t: 0, life: 0.45 });
+        parts.push({ type: 'ring', x: c.x, y: c.y, r0: 8, r1: c.w * 0.95, c: rc, w: 4, t: 0, life: 0.45 });
+        if (up || rar >= 2) parts.push({ type: 'ring', x: c.x, y: c.y, r0: 6, r1: c.w * 1.45, c: '#ffffff', w: 3, t: -0.08, life: 0.6 });
+        burst(c.x, c.y, rar === 3 ? 30 : 22, rar === 3 ? ['#FFE14D', '#FFC21A', '#ffffff'] : [t1, '#FFE14D', '#ffffff'], 5, 'star', { s: 3.5, sr: 3.5, g: 0.16 });
+        return;
+      }
       parts.push({ type: 'ring', x: c.x, y: c.y, r0: 8, r1: c.w * 0.9, c: rar ? RAR[rar] : biz, t: 0, life: 0.5 });
       if (up || rar >= 2) parts.push({ type: 'ring', x: c.x, y: c.y, r0: 4, r1: c.w * 1.4, c: '#ffffff', t: -0.08, life: 0.7 });
       burst(c.x, c.y, rar === 3 ? 36 : up ? 30 : 20, rar === 3 ? ['#FFC83D', '#FFF1B0', '#FFAA00', '#ffffff'] : cols, rar === 3 ? 6 : 4.6, rar === 3 ? 'star' : null);

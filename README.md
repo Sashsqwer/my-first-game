@@ -73,6 +73,12 @@ python3 -m http.server -d app 8000
 
 `node tools/screens.js` снимает все 5 стилей: `docs/screens/themes/<mix|k|m|c|b>-*.jpg` и итоговый коллаж `docs/screens/final-style.png`. Старые коллажи пробных тем (`themes-compare*.png`) лежат как архив. Лист всех 64 сотрудников — `docs/screens/avatars-sheet.png`.
 
+## Новый основной стиль (мультяшный) — пробные варианты
+
+Под мультяшных сотрудников (`docs/staff-concepts/2-multyashnyj-OSNOVNOJ.jpg`) — 3 варианта на выбор, только для просмотра: `?theme=ca` (A «Солнечный город»), `?theme=cb` (B «Сочный офис»), `?theme=cc` (C «Конфетный поп»). Стили — `app/themes-cartoon.css`, сцены — `app/theme.js`. В «Стили» не добавлены, основной по умолчанию не менялся.
+`&preview_staff=1` — вместо SVG мультяшные персонажи с пробного листа (нарезка: `python3 tools/staff-preview.py` → `app/img/staff-preview/`, только для превью).
+Скриншоты: `node tools/screens-cartoon.js` → `docs/screens/cartoon/` и коллажи `docs/screens/cartoon-main-variants.png` (с картинками) и `cartoon-main-variants-svg.png` (с SVG).
+
 ## Сотрудники: рисованные и картинки
 
 Во всех темах сотрудники рисуются кодом (`app/avatars.js`, SVG «чиби»): форма и предмет по профессии, чем выше уровень — тем солиднее (у 8-го — корона и золото). Внешность одна и та же для пары «бизнес + уровень». Вернуть эмодзи — ⚙️ → «Сотрудники: смайлики».
