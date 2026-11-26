@@ -4,7 +4,7 @@
    Проверяет: первый запуск и обучение, подсказки после обучения, найм, тап (и защиту от быстрых тапов), слияния и редкости,
    переезд по всем 8 ступеням, улучшения до максимума, агентство и все пачки, осколки, календарь 7 дней и перевод часов,
    задания дня и сундук (без двойных наград), аврал, заботу, офлайн-доход (подмена времени), 2-й бизнес на 5-м уровне,
-   доп. места, «Стили», настройки, сброс, большие числа, битое сохранение, миграции v1/v2 → v3, сохранение при сворачивании,
+   доп. места, «Стили» (комплекты main/neon/collection и перевод старых стилей), настройки, сброс, большие числа, битое сохранение, миграции v1/v2 → v3, сохранение при сворачивании,
    Telegram (подставной WebApp: initData, CloudStorage, вибро, кнопка «Назад», цвета, «Пригласить»), игру без Telegram и без сервера,
    скорость на слабом телефоне (CPU ×4), утечки таймеров, prefers-reduced-motion. В конце — таблица «проверка → ✅/❌». */
 'use strict';
@@ -315,18 +315,24 @@ function report() {
     check(D('максимальный доход: шапка без NaN и прокрутки'), !(await badText(page)) && !(await hScroll(page)), (await badText(page)) || (await hScroll(page)));
     check(D('максимальный доход: ₽/час в шапке'), /₽\/час/.test(await page.locator('#rate').innerText()), await page.locator('#rate').innerText());
     // стили и настройки
-    await page.evaluate(() => { window.__game.state.net.counted = 1; });
+    await page.evaluate(() => { window.__game.state.net.counted = 2; });
     await page.click('#btn-settings'); await page.waitForTimeout(250);
-    check(D('настройки: версия и стиль'), /версия 0\.5/.test(await page.locator('.modal').innerText()));
+    check(D('настройки: версия и стиль'), /версия 0\.6/.test(await page.locator('.modal').innerText()) && /Стили: Основной/.test(await page.locator('.modal').innerText()));
     await page.click('.modal [data-skins]'); await page.waitForTimeout(250);
-    check(D('«Стили»: 5 стилей, основной надет'), (await page.locator('.modal .sk').count()) === 5 && (await page.locator('.modal .sk.on').count()) === 1);
+    check(D('«Стили»: 3 комплекта, основной надет'), (await page.locator('.modal .sk').count()) === 3 && (await page.locator('.modal .sk.on [data-prev="main"]').count()) === 1);
+    check(D('«Стили»: у каждого комплекта превью с сотрудником'), (await page.locator('.modal .sk-prev .sk-av').count()) === 3);
     check(D('«Стили»: без горизонтальной прокрутки'), !(await hScroll(page)), await hScroll(page));
-    await page.click('.modal [data-skin-wear="k"]'); await page.waitForTimeout(300);
-    check(D('«Стили»: «Полночь» за 1 друга надевается'), (await page.evaluate(() => document.documentElement.dataset.theme)) === 'k' && (await S(page)).skin === 'k');
+    check(D('«Стили»: «Ночной неон» при 2 друзьях закрыт (3 друга или ⭐ 75)'), (await page.locator('.modal [data-skin-wear="neon"]').count()) === 0 && (await page.locator('.modal [data-skin-star="neon"]').count()) === 1);
+    await closeModals(page);
+    await page.evaluate(() => { window.__game.state.net.counted = 3; });
     await page.click('#btn-settings'); await page.waitForTimeout(250);
     await page.click('.modal [data-skins]'); await page.waitForTimeout(250);
-    await page.click('.modal [data-skin-star="c"]'); await page.waitForTimeout(150);
-    check(D('«Стили»: за ⭐ — не надевается без оплаты'), (await S(page)).skin === 'k');
+    await page.click('.modal [data-skin-wear="neon"]'); await page.waitForTimeout(300);
+    check(D('«Стили»: «Ночной неон» за 3 друзей надевается'), (await page.evaluate(() => document.documentElement.dataset.theme)) === 'neon' && (await S(page)).skin === 'neon');
+    await page.click('#btn-settings'); await page.waitForTimeout(250);
+    await page.click('.modal [data-skins]'); await page.waitForTimeout(250);
+    await page.click('.modal [data-skin-star="collection"]'); await page.waitForTimeout(150);
+    check(D('«Стили»: «Коллекция» за ⭐ — не надевается без оплаты'), (await S(page)).skin === 'neon');
     await closeModals(page);
     // сброс
     const slotsBefore = (await S(page)).slots;
@@ -335,7 +341,7 @@ function report() {
     await page.click('.modal [data-yes]'); await page.waitForTimeout(300);
     s = await S(page);
     check(D('сброс: экран выбора, бизнесов нет'), s.businesses.length === 0 && await page.locator('#choose:not([hidden])').count());
-    check(D('сброс: доп. места и стиль остаются'), JSON.stringify(s.slots) === JSON.stringify(slotsBefore) && s.skin === 'k', { s: s.slots, slotsBefore, skin: s.skin });
+    check(D('сброс: доп. места и стиль остаются'), JSON.stringify(s.slots) === JSON.stringify(slotsBefore) && s.skin === 'neon', { s: s.slots, slotsBefore, skin: s.skin });
     await startBiz(page, 'delivery');
     check(D('после сброса — новая игра с обучением'), (await S(page)).tutorial === 0 && /Нанять/.test(await page.locator('#tutor').innerText()));
     // все вкладки без NaN и прокрутки
@@ -366,7 +372,7 @@ function report() {
   {
     // облако свежее локального → берём облако
     const now = Date.now();
-    const mk = (money, savedAt) => ({ v: 3, savedAt, createdAt: savedAt - H, active: 0, tutorial: 3, guide: 3, news: '0.5', daily: { last: null, streak: 0 },
+    const mk = (money, savedAt) => ({ v: 3, savedAt, createdAt: savedAt - H, active: 0, tutorial: 3, guide: 3, news: '0.6', daily: { last: null, streak: 0 },
       businesses: [{ type: 'burger', money, earned: 0, room: 0, hires: 3, merges: 1, grid: [2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], upgrades: { boost: 0, chairs: 0, pr: 0 }, needs: [now, now, now], inbox: [], seen: 2 }] });
     const local = mk(111, now - 20e3), cloudNewer = mk(999, now - 10e3);
     const init = `try { if (!sessionStorage.getItem('x')) { sessionStorage.setItem('x', 1); localStorage.setItem('${KEY}', ${JSON.stringify(JSON.stringify(local))}); } } catch (e) {}`;
@@ -375,7 +381,7 @@ function report() {
     check('Telegram: CloudStorage свежее localStorage → берётся облако', Math.round(s.businesses[0].money) >= 999, s.businesses[0].money);
     const calls = await page.evaluate(() => window.__tg.calls.map(c => c[0]));
     check('Telegram: ready() и expand()', calls.includes('ready') && calls.includes('expand'));
-    check('Telegram: цвет шапки и нижней полосы — под стиль', await page.evaluate(() => window.__tg.calls.some(c => c[0] === 'header' && c[1] === '#07090f') && window.__tg.calls.some(c => c[0] === 'bottom')));
+    check('Telegram: цвет шапки и нижней полосы — под стиль', await page.evaluate(() => window.__tg.calls.some(c => c[0] === 'header' && c[1] === '#f4c98f') && window.__tg.calls.some(c => c[0] === 'bottom')));
     check('Telegram: свайп вниз не закрывает игру (disableVerticalSwipes)', calls.includes('noSwipe'));
     await page.click('#btn-hire'); await page.waitForTimeout(150);
     check('Telegram: вибро (HapticFeedback)', await page.evaluate(() => window.__tg.calls.some(c => c[0] === 'haptic')));
@@ -447,6 +453,19 @@ function report() {
       check(`миграция ${name}: окно «Что нового» (после офлайн-дохода)`, news);
       await ctx.close();
     }
+    // стили до 0.6 → комплекты: k/m → «Ночной неон» (надетый остаётся открытым), b/c → «Коллекция» (купленное сохраняется), mix → основной
+    for (const [name, skin, bought, wantSkin, wantBought, theme] of [
+      ['k надет', 'k', [], 'neon', ['neon'], 'neon'], ['m надет', 'm', [], 'neon', ['neon'], 'neon'],
+      ['mix + куплены c, b', 'mix', ['c', 'b'], 'main', ['collection'], 'main'], ['b надет и куплен', 'b', ['b'], 'collection', ['collection'], 'collection'],
+      ['мусор', 'zzz', ['q', 5, 'k'], 'main', ['neon'], 'main']]) {
+      const sv = { v: 3, savedAt: Date.now() - 30e3, createdAt: Date.now() - 864e5, active: 0, tutorial: 3, guide: 3, news: '0.5', daily: { last: null, streak: 0 }, net: { invited: 1, counted: 1, claimed: [] },
+        skin, skinsBought: bought, businesses: [{ type: 'coffee', money: 500, earned: 900, room: 0, hires: 10, merges: 5, grid: [3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], upgrades: { boost: 0, chairs: 0, pr: 0 }, seen: 3, needs: [Date.now(), Date.now(), Date.now()], inbox: [] }] };
+      const init = `try { if (!sessionStorage.getItem('x')) { sessionStorage.setItem('x', 1); localStorage.setItem('${KEY}', ${JSON.stringify(JSON.stringify(sv))}); localStorage.setItem('startup_zero_theme', '${skin}'); } } catch (e) {}`;
+      const { ctx, page } = await open(iphone, { tag: 'стиль ' + name, init, wait: 500 });
+      const s = await S(page), th = await page.evaluate(() => document.documentElement.dataset.theme);
+      check(`миграция стиля (${name}) → ${wantSkin}, открыты: ${wantBought.join(', ')}`, s.skin === wantSkin && JSON.stringify(s.skinsBought) === JSON.stringify(wantBought) && th === theme && s.businesses[0].grid[0] === 3, { skin: s.skin, bought: s.skinsBought, th });
+      await ctx.close();
+    }
     // офлайн-доход: подменяем время (Date.now и new Date) на +7 ч, потом на −1 сутки
     const t0 = Date.now();
     const { ctx, page } = await open(iphone, { tag: 'офлайн', time: t0 });
@@ -482,7 +501,7 @@ function report() {
   }
 
   // ======================= 6. Скины на узком экране =======================
-  for (const th of ['mix', 'k', 'm', 'c', 'b']) {
+  for (const th of ['main', 'neon', 'collection']) {
     const { ctx, page } = await open(small, { tag: 'скин ' + th, query: '?theme=' + th });
     await startBiz(page, 'gamedev');
     await fresh(page, () => { const s = window.__game.state, b = s.businesses[0]; s.tutorial = 3; s.guide = 3; b.room = 5; b.grid = [1, 12, 23, 34, 5, 6, 7, 8, 18, 27, 36, 5, 4, 3, 2, 1, 0, 0, 0, 0]; b.seen = 8; b.money = 3.3e10; });
@@ -499,7 +518,7 @@ function report() {
       window.setInterval = function (f, t) { var id = si.apply(window, arguments); live.add(id); return id; };
       window.clearInterval = function (id) { live.delete(id); return ci(id); };
       window.__intervals = function () { return live.size; }; })();`;
-    const { ctx, page } = await open(iphone, { tag: 'скорость', init });
+    const { ctx, page } = await open(iphone, { tag: 'скорость', init, query: '?theme=neon' });
     await startBiz(page, 'it');
     await fresh(page, () => { const s = window.__game.state, b = s.businesses[0]; s.tutorial = 3; s.guide = 3; b.grid = [5, 4, 13, 3, 2, 2, 21, 1, 1, 34, 6, 7]; });
     const cdp = await ctx.newCDPSession(page);
@@ -518,8 +537,14 @@ function report() {
     await ctx.close();
     const { ctx: c2, page: p2 } = await open(iphone, { tag: 'reduced', reduced: true });
     await startBiz(p2, 'it');
+    const still = () => p2.evaluate(() => [...document.querySelectorAll('.sc-x, .sc-x *')].filter(n => { const a = getComputedStyle(n); return a.animationName !== 'none' && parseFloat(a.animationDuration) > 0.01 && a.display !== 'none'; }).length);
+    check('prefers-reduced-motion: основной — фон не двигается', (await still()) === 0, await still());
+    await p2.evaluate(() => window.GameTheme.set('collection'));
+    // при ?theme в адресе set() не меняет стиль, а здесь адрес чистый — меняет
+    check('prefers-reduced-motion: «Коллекция» — фон не двигается', (await p2.evaluate(() => document.documentElement.dataset.theme)) === 'collection' && (await still()) === 0, await still());
+    await p2.evaluate(() => window.GameTheme.set('neon'));
     const rain = await p2.evaluate(() => { const r = document.querySelector('.sc-x .rain'); return r ? getComputedStyle(r).display : 'none'; });
-    check('prefers-reduced-motion: дождь выключен', rain === 'none', rain);
+    check('prefers-reduced-motion: «Ночной неон» — дождь выключен', rain === 'none' && (await still()) === 0, rain);
     await c2.close();
   }
 
