@@ -447,10 +447,20 @@
     var list = window.CONTENT && window.CONTENT.STAFF_IMG;
     return !!(list && list.indexOf(biz + '-' + lvl) >= 0);
   }
+  // ВРЕМЕННО, только для просмотра стилей: ?preview_staff=1 — вместо SVG мультяшные персонажи с пробного листа
+  // (docs/staff-concepts/2-multyashnyj-OSNOVNOJ.jpg, нарезка — tools/staff-preview.py → img/staff-preview/1..12.webp).
+  // Уровни 1–6 — персонажи своего бизнеса, 7 — бизнесмен, 8 — босс в короне.
+  var PREVIEW = false;
+  try { PREVIEW = new URLSearchParams(location.search).get('preview_staff') === '1'; } catch (e) {}
+  var PV = { coffee: [1, 2], it: [3, 4], barber: [5], burger: [6], auto: [7], fitness: [8], gamedev: [9], delivery: [10] };
+  function previewSrc(biz, lvl) {
+    var n = lvl >= 8 ? 12 : lvl === 7 ? 11 : (PV[biz] || [1])[(lvl - 1) % (PV[biz] || [1]).length];
+    return 'img/staff-preview/' + n + '.webp';
+  }
   // Главная функция: картинка сотрудника (img/staff/*.webp, если есть, иначе SVG)
   function avatar(biz, lvl, rar, cls) {
     lvl = Math.max(1, Math.min(8, lvl | 0));
-    var src = hasImg(biz, lvl) ? 'img/staff/' + biz + '-' + lvl + '.webp' : svgUri(biz, lvl, rar);
+    var src = PREVIEW ? previewSrc(biz, lvl) : hasImg(biz, lvl) ? 'img/staff/' + biz + '-' + lvl + '.webp' : svgUri(biz, lvl, rar);
     return '<img class="av' + (cls ? ' ' + cls : '') + '" src="' + src + '" alt="" draggable="false" decoding="async">';
   }
   function mode() { try { return localStorage.getItem(KEY) === 'emoji' ? 'emoji' : 'art'; } catch (e) { return 'art'; } }
