@@ -1,6 +1,7 @@
 /* «Стартап с нуля» — сотрудники, нарисованные кодом (SVG, «чиби»: большая голова, чистые формы).
-   avatar(business, level, rarity, cls) → HTML-строка: <img> с картинкой.
-     1) если в CONTENT.STAFF_IMG есть «<business>-<level>» — берём app/img/staff/<business>-<level>.webp (нарисованные картинки);
+   avatar(business, level, rarity, cls, kit) → HTML-строка: <img> с картинкой. kit — комплект стиля (main | neon | collection),
+   по умолчанию — надетый (GameTheme.get()).
+     1) если в CONTENT.STAFF_IMG[kit] есть «<business>-<level>» — берём app/img/staff/<kit>/<business>-<level>.webp (нарисованные картинки);
      2) иначе — SVG отсюда (кэшируется как data:URI, на клетку — один <img>, без лишнего DOM).
    Внешность детерминирована по (бизнес, уровень): один уровень всегда выглядит одинаково.
    Чем выше уровень — тем солиднее: футболка → форма профессии → рубашка/жилет → пиджак → золото и корона.
@@ -443,11 +444,17 @@
     if (!cache[k]) cache[k] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(draw(biz, lvl, rar || 0));
     return cache[k];
   }
-  function hasImg(biz, lvl) {
-    var list = window.CONTENT && window.CONTENT.STAFF_IMG;
-    return !!(list && list.indexOf(biz + '-' + lvl) >= 0);
+  var KITS = { main: 1, neon: 1, collection: 1 };
+  function kitNow(kit) {
+    if (KITS[kit]) return kit;
+    var T = window.GameTheme, t = T && T.get ? T.get() : 'main';
+    return KITS[t] ? t : 'main';
   }
-  // ВРЕМЕННО, только для просмотра стилей: ?preview_staff=1 — вместо SVG мультяшные персонажи с пробного листа
+  function hasImg(kit, biz, lvl) {
+    var all = window.CONTENT && window.CONTENT.STAFF_IMG, list = all && all[kit];
+    return !!(Array.isArray(list) && list.indexOf(biz + '-' + lvl) >= 0);
+  }
+  // ВРЕМЕННО, только для просмотра стилей: ?preview_staff=1 — в основном комплекте вместо SVG мультяшные персонажи с пробного листа
   // (docs/staff-concepts/2-multyashnyj-OSNOVNOJ.jpg, нарезка — tools/staff-preview.py → img/staff-preview/1..12.webp).
   // Уровни 1–6 — персонажи своего бизнеса, 7 — бизнесмен, 8 — босс в короне.
   var PREVIEW = false;
@@ -457,10 +464,10 @@
     var n = lvl >= 8 ? 12 : lvl === 7 ? 11 : (PV[biz] || [1])[(lvl - 1) % (PV[biz] || [1]).length];
     return 'img/staff-preview/' + n + '.webp';
   }
-  // Главная функция: картинка сотрудника (img/staff/*.webp, если есть, иначе SVG)
-  function avatar(biz, lvl, rar, cls) {
-    lvl = Math.max(1, Math.min(8, lvl | 0));
-    var src = PREVIEW ? previewSrc(biz, lvl) : hasImg(biz, lvl) ? 'img/staff/' + biz + '-' + lvl + '.webp' : svgUri(biz, lvl, rar);
+  // Главная функция: картинка сотрудника комплекта (img/staff/<kit>/*.webp, если есть, иначе SVG)
+  function avatar(biz, lvl, rar, cls, kit) {
+    lvl = Math.max(1, Math.min(8, lvl | 0)); kit = kitNow(kit);
+    var src = PREVIEW && kit === 'main' ? previewSrc(biz, lvl) : hasImg(kit, biz, lvl) ? 'img/staff/' + kit + '/' + biz + '-' + lvl + '.webp' : svgUri(biz, lvl, rar);
     return '<img class="av' + (cls ? ' ' + cls : '') + '" src="' + src + '" alt="" draggable="false" decoding="async">';
   }
   function mode() { try { return localStorage.getItem(KEY) === 'emoji' ? 'emoji' : 'art'; } catch (e) { return 'art'; } }

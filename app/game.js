@@ -7,10 +7,11 @@
   var CLOUD_KEY = 'save_v1';
   var VERSION = 3; // 3 — 8 ступеней офиса и доход в ₽/час (сохранения v1/v2 переводятся в normalize)
   var HOUR = 3600000, MIN = 60000;
-  var GAME_VER = '0.5';
+  var GAME_VER = '0.6';
   // «Что нового» — показываем один раз тем, кто играл в прошлой версии (новичкам — нет)
-  var NEWS = ['🎁 После обучения подскажем, где подарок дня, бесплатная пачка и задания', '📋 Задания дня теперь всегда выполнимы — подстраиваются под твой доход',
-    '🧰 Сундук за все три задания — пачка резюме и осколок', '📣 Новый сотрудник или переезд — можно похвастаться друзьям', '🏢 Переезд списывает только свою цену, остальные деньги остаются'];
+  var NEWS = ['🎨 Новый основной стиль «Сочный офис» — светлый, мультяшный, у каждого бизнеса свой цвет',
+    '🌧️ Ночь, дождь и неон теперь — комплект «Ночной неон»: ⚙️ → Стили', '🏆 Новый комплект «Коллекция» — витрина коллекционера с подставками',
+    '🎁 Носил «Полночь» или «Ночной Токио» — «Ночной неон» уже твой; купленные стили перешли в «Коллекцию»'];
 
   // ---------- Telegram ----------
   var tg = window.Telegram && window.Telegram.WebApp;
@@ -107,7 +108,7 @@
       rush: { until: 0, readyAt: 0 },
       net: { invited: 0, counted: 0, claimed: [], refBonus: false },
       slots: { friends: 0, stars: 0, streak: false },
-      skin: 'mix', skinsBought: [], news: GAME_VER, guide: 0
+      skin: 'main', skinsBought: [], news: GAME_VER, guide: 0
     };
   }
   function valid(s) {
@@ -139,8 +140,17 @@
     s.slots.streak = !!s.slots.streak || (s.daily.streak || 0) >= B.SLOT_STREAK_DAYS;
     var extra = B.extraSlots(s.slots);
     // стили: выбранный и купленные за ⭐; надетый, но уже закрытый — возвращаем основной
+    // с 0.6 стили — комплекты: старые переводим без потерь (k, m → «Ночной неон»; b, c → «Коллекция»; mix → основной).
+    // Надетый старый стиль и купленные остаются открытыми — новый комплект записываем в skinsBought.
     if (!Array.isArray(s.skinsBought)) s.skinsBought = [];
-    if (!B.skin(s.skin) || !B.skinOpen(B.skin(s.skin), s.net.counted, s.skinsBought)) s.skin = 'mix';
+    var OLD = B.SKIN_OLD, bought = [];
+    s.skinsBought.forEach(function (id) { id = OLD[id] || id; var k = B.skin(id); if (k && !k.free && bought.indexOf(id) < 0) bought.push(id); });
+    if (typeof s.skin === 'string' && OLD[s.skin]) {
+      s.skin = OLD[s.skin];
+      if (!B.skin(s.skin).free && bought.indexOf(s.skin) < 0) bought.push(s.skin);
+    }
+    s.skinsBought = bought;
+    if (!B.skin(s.skin) || !B.skinOpen(B.skin(s.skin), s.net.counted, s.skinsBought)) s.skin = 'main';
     s.businesses = s.businesses.filter(function (b) { return obj(b) && BIZ[b.type]; });
     var oldRooms = !(s.v >= 3);
     s.businesses.forEach(function (b) {
@@ -414,9 +424,19 @@
   // Высота клеток подстраивается под экран: сетка влезает без прокрутки, пока клетка не меньше 52px
   function fitGrid() {
     if (el.app.hidden || !cells.length) return;
+    // если клеткам тесно (короткий экран, баннер, большое помещение) — компактный режим офиса (.tight: ниже потребности,
+    // «Дальше», подсказка и ряд замков, без второй строки баннера) и пересчёт
+    // а если и так мало (маленький телефон) — ещё и прячем баннер «Пригласи друзей» (.tight2; приглашение есть во вкладке «Друзья»)
+    var view = el.board.parentNode;
+    view.classList.remove('tight', 'tight2');
+    var h = gridRows(false);
+    if (h < 60) { view.classList.add('tight'); h = gridRows(true); }
+    if (h < 42 && !el.banner.hidden) { view.classList.add('tight2'); gridRows(true); }
+  }
+  function gridRows(tight) {
     var rows = Math.ceil(cells.length / B.COLS);
     // закрытые места целым отдельным рядом — ряд низкий, чтобы не съедать место у сотрудников
-    var lockRow = el.grid.children.length > rows * B.COLS, LOCK_H = 34;
+    var lockRow = el.grid.children.length > rows * B.COLS, LOCK_H = tight ? 28 : 34;
     var cs = getComputedStyle(el.board);
     var gap = parseFloat(cs.rowGap) || 10;
     var avail = el.board.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
@@ -428,12 +448,13 @@
     avail -= (parseFloat(gcs.paddingTop) || 0) + (parseFloat(gcs.paddingBottom) || 0);
     if (lockRow) avail -= LOCK_H + ggap;
     var colW = (el.grid.clientWidth - (parseFloat(gcs.paddingLeft) || 0) - (parseFloat(gcs.paddingRight) || 0) - ggap * (B.COLS - 1)) / B.COLS;
-    var h = Math.min(colW * 1.12, (avail - ggap * (rows - 1)) / rows);
-    h = Math.max(rows > 4 ? 40 : 44, Math.floor(h));
+    var raw = Math.min(colW * 1.12, (avail - ggap * (rows - 1)) / rows);
+    var h = Math.max(tight ? 38 : rows > 4 ? 40 : 44, Math.floor(raw));
     el.grid.style.gridAutoRows = h + 'px';
     el.grid.style.gridTemplateRows = 'repeat(' + rows + ', ' + h + 'px)' + (lockRow ? ' ' + LOCK_H + 'px' : '');
     el.grid.classList.toggle('lockrow', lockRow);
     el.grid.style.setProperty('--ch', h + 'px');
+    return raw;
   }
   function deco() { var T = window.GameTheme; return T && T.cellDeco ? T.cellDeco() : ''; }
   function cellHtml(v) {
@@ -1407,20 +1428,27 @@
   }
   function skinCond(k) {
     if (k.free) return 'Бесплатно';
-    if (k.friends) return '👥 ' + k.friends + ' ' + plural(k.friends, 'друг', 'друга', 'друзей');
-    return '⭐ ' + k.stars;
+    var f = k.friends ? '👥 ' + k.friends + ' ' + plural(k.friends, 'друг', 'друга', 'друзей') : '';
+    return f && k.stars ? f + ' или ⭐ ' + k.stars : f || '⭐ ' + k.stars;
+  }
+  // превью комплекта: маленькая сцена оформления + сотрудник этого комплекта
+  function skinPrev(k) {
+    var A = window.GameAvatars, b = biz(), type = b ? b.type : 'it';
+    var face = A ? A.avatar(type, 4, 0, 'sk-av', k.id) : '<span class="sk-em">' + def().staff[3].e + '</span>';
+    return '<div class="sk-prev" data-prev="' + k.id + '" aria-hidden="true"><i class="p1"></i><i class="p2"></i><i class="p3"></i>' + face + '</div>';
   }
   function showSkins() {
     var cnt = state.net.counted || 0;
-    var html = '<h2>🎨 Стили</h2><p>Оформление всей игры. Основной — у всех, остальные открываются за друзей и ⭐.</p><div class="skins">' +
+    var html = '<h2>🎨 Стили</h2><p>Комплект — оформление и сотрудники в одном стиле. Основной — у всех, остальные открываются за друзей и ⭐.</p><div class="skins">' +
       B.SKINS.map(function (k) {
         var on = state.skin === k.id, open = B.skinOpen(k, cnt, state.skinsBought);
+        var lock = [];
+        if (k.friends) lock.push('<button class="btn btn-dark sk-btn" data-skin-friends>🔒 ' + cnt + '/' + k.friends + ' ' + plural(k.friends, 'друг', 'друга', 'друзей') + '</button>');
+        if (k.stars) lock.push('<button class="btn btn-dark sk-btn" data-skin-star="' + k.id + '">' + (k.friends ? '' : '🔒 ') + '⭐ ' + k.stars + '</button>');
         var act = on ? '<span class="sk-on">✓ Надет</span>'
           : open ? '<button class="btn btn-primary sk-btn" data-skin-wear="' + k.id + '">Надеть</button>'
-          : k.friends ? '<button class="btn btn-dark sk-btn" data-skin-friends>🔒 ' + cnt + '/' + k.friends + ' друзей</button>'
-          : '<button class="btn btn-dark sk-btn" data-skin-star="' + k.id + '">🔒 ⭐ ' + k.stars + '</button>';
-        return '<div class="sk' + (on ? ' on' : '') + (open ? '' : ' locked') + '">' +
-          '<div class="sk-prev" data-prev="' + k.id + '"><i class="p1"></i><i class="p2"></i><i class="p3"></i><i class="p4"></i></div>' +
+          : '<div class="sk-acts">' + lock.join('') + '</div>';
+        return '<div class="sk' + (on ? ' on' : '') + (open ? '' : ' locked') + '">' + skinPrev(k) +
           '<div class="sk-txt"><b>' + esc(k.n) + '</b><small>' + esc(k.d) + '</small><em>' + skinCond(k) + '</em></div>' + act + '</div>';
       }).join('') + '</div><div class="btns"><button class="btn btn-dark" data-close>Закрыть</button></div>';
     modal(html, function (root, close) {
