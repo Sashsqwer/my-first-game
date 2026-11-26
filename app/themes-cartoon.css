@@ -1,0 +1,418 @@
+/* «Стартап с нуля» — ПРОБНЫЕ варианты нового ОСНОВНОГО мультяшного стиля (под мультяшных сотрудников с толстым контуром).
+   Только для просмотра: ?theme=ca | cb | cc (в «Стили» не добавлены, основной по умолчанию не меняется).
+     ca — A «Солнечный город»: дневное небо, облака, домики; светлые панели, тёмно-синий контур.
+     cb — B «Сочный офис»: тёплый интерьер (обои, окно, растения, паркет); доска — пол, клетки — коврики.
+     cc — C «Конфетный поп»: сочный фиолетово-бирюзовый фон с лучами; глянцевые «мармеладные» клетки.
+   theme.js ставит <html data-theme="ca|cb|cc" data-cartoon="…"> и рисует сцену (.sc-x).
+   Общее — html[data-cartoon]; у каждого бизнеса свой цвет: --t1 (основной), --t2 (тёмный, «губа» и тени), --t3 (светлый тон).
+   Анимации — только transform/opacity; при prefers-reduced-motion выключены. */
+
+/* ---------- Цвет бизнеса (мультяшный, плотнее неона) ---------- */
+html[data-cartoon], html[data-cartoon] .biz { --t1: #45C93A; --t2: #23801B; --t3: #E2F8D6; --t-ink: #fff; }
+html[data-cartoon][data-biz="coffee"], html[data-cartoon] .biz-coffee { --t1: #F08A24; --t2: #A24C0B; --t3: #FFE8C9; }
+html[data-cartoon][data-biz="it"], html[data-cartoon] .biz-it { --t1: #18BFA0; --t2: #0A7466; --t3: #D2F6EE; }
+html[data-cartoon][data-biz="barber"], html[data-cartoon] .biz-barber { --t1: #F0465C; --t2: #A41A34; --t3: #FFDDE2; }
+html[data-cartoon][data-biz="burger"], html[data-cartoon] .biz-burger { --t1: #FF6A1F; --t2: #B33A06; --t3: #FFE2CF; }
+html[data-cartoon][data-biz="auto"], html[data-cartoon] .biz-auto { --t1: #3D7BFF; --t2: #1C45B4; --t3: #DCE7FF; }
+html[data-cartoon][data-biz="fitness"], html[data-cartoon] .biz-fitness { --t1: #6CC51C; --t2: #3A760A; --t3: #E6F8CF; }
+html[data-cartoon][data-biz="gamedev"], html[data-cartoon] .biz-gamedev { --t1: #9B5CFF; --t2: #5A26B8; --t3: #ECE0FF; }
+html[data-cartoon][data-biz="delivery"], html[data-cartoon] .biz-delivery { --t1: #FFB80F; --t2: #A86A00; --t3: #FFF1C2; --t-ink: #3a2500; }
+
+/* =====================================================================
+   ОБЩЕЕ ДЛЯ ТРЁХ ВАРИАНТОВ
+   ===================================================================== */
+html[data-cartoon] {
+  --bw: 2.5px; --rare: #2E9BFF; --epic: #A35CFF; --legend: #FFB800; --danger: #F2384F; --warn: #FF9A1F;
+  --go1: #8CF05A; --go2: #3DBB22; --go-lip: #1F7A12;           /* зелёная «Нанять» */
+  --bl1: #6FD8FF; --bl2: #1E9BEB; --bl-lip: #0D5FA0;            /* голубой «Аврал» */
+  --gd1: #FFE58A; --gd2: #FFB300; --gd-lip: #A35F00;            /* золото */
+  --drop: 0 4px 0 var(--ink);
+  --hi: inset 0 2px 0 rgba(255, 255, 255, .75);
+  --outline: 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 2px 0 var(--ink), 0 -2px 0 var(--ink), 1.5px 1.5px 0 var(--ink), -1.5px 1.5px 0 var(--ink), 1.5px -1.5px 0 var(--ink), -1.5px -1.5px 0 var(--ink);
+  --outline-s: 1.3px 0 0 var(--ink), -1.3px 0 0 var(--ink), 0 1.3px 0 var(--ink), 0 -1.3px 0 var(--ink), 1px 1px 0 var(--ink), -1px 1px 0 var(--ink), 1px -1px 0 var(--ink), -1px -1px 0 var(--ink);
+  --ic-o: var(--ink);
+}
+html[data-cartoon] body { font-family: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: var(--text); }
+html[data-cartoon] .sc-floor, html[data-cartoon] .sc-stars { display: none; }
+html[data-cartoon] .sc-x { position: absolute; inset: 0; display: block; }
+html[data-cartoon] .sc-x > * { position: absolute; }
+html[data-cartoon] .sc-x > i { border-radius: 0; }
+html[data-cartoon] .sc-x svg { overflow: visible; }
+
+/* ---------- Шапка: деньги — белые с толстым контуром, кнопки — пластиковые ---------- */
+html[data-cartoon] .money { color: #fff; font-size: 36px; line-height: 1.05; font-weight: 900; letter-spacing: -.5px; text-shadow: var(--outline), 0 4px 0 var(--ink); padding: 2px 4px 5px 3px; }
+html[data-cartoon] .coin-big { width: 36px; height: 36px; border: var(--bw) solid var(--ink); box-shadow: 0 3px 0 var(--ink), inset 0 -3px 0 rgba(150, 80, 0, .45), inset 0 2px 0 rgba(255, 255, 255, .6); }
+html[data-cartoon] .coin-big::after { font-size: 18px; }
+html[data-cartoon] .icon-btn { width: 42px; height: 42px; border-radius: 14px; border: var(--bw) solid var(--ink); background: linear-gradient(180deg, #fff 0%, #E9F1FF 100%); box-shadow: var(--drop), var(--hi); }
+html[data-cartoon] .icon-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+html[data-cartoon] .icon-btn .ti { width: 26px; height: 26px; }
+html[data-cartoon] .ti .o { stroke-width: 1.8; }
+html[data-cartoon] #btn-daily { --ic1: #FF5C7A; --ic2: #FFC93D; --ic3: #fff; --ic4: #FF5C7A; }
+html[data-cartoon] #btn-quests { --ic1: #fff; --ic2: #3D9BFF; --ic3: #2FB34A; }
+html[data-cartoon] #btn-settings { --ic1: #9AA6C2; --ic2: #fff; --ic3: #9AA6C2; }
+html[data-cartoon] .dot { top: -3px; right: -3px; width: 12px; height: 12px; background: #FF3B5C; border: 2px solid var(--ink); box-shadow: none; }
+html[data-cartoon] .rate { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; margin-top: 2px; padding: 2px 11px; border-radius: 20px; font-size: 12.5px; font-weight: 800;
+  color: var(--text); background: var(--pill, #fff); border: 2px solid var(--ink); box-shadow: 0 2px 0 var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html[data-cartoon] .rate b { color: var(--t2); }
+html[data-cartoon] .rate .x2 { color: #E8590C; }
+html[data-cartoon] .rate .tired-t { color: var(--danger); }
+html[data-cartoon] .chip { height: 31px; border-radius: 17px; border: 2px solid var(--ink); font-weight: 800; box-shadow: 0 3px 0 var(--ink); background: var(--pill, #fff); color: var(--muted); }
+html[data-cartoon] .chip-room { color: var(--t-ink); background: linear-gradient(180deg, color-mix(in srgb, var(--t1) 70%, #fff), var(--t1) 60%); text-shadow: 0 1px 0 rgba(0, 0, 0, .25); box-shadow: 0 3px 0 var(--ink), inset 0 2px 0 rgba(255, 255, 255, .45); }
+html[data-cartoon][data-biz="delivery"] .chip-room { text-shadow: none; }
+html[data-cartoon] .chip-lock.open { color: var(--text); border-color: var(--ink); }
+
+/* Баннер «Пригласи друзей» */
+html[data-cartoon] .invite-banner { border: var(--bw) solid var(--ink); border-radius: 18px; background: linear-gradient(180deg, #FFF7D6, #FFE27A); box-shadow: var(--drop), var(--hi); color: #3a2a00; }
+html[data-cartoon] .invite-banner .ib-t small { color: #6b5418; }
+html[data-cartoon] .invite-banner .ib-ico { border: 2px solid var(--ink); background: linear-gradient(180deg, #8fd8ff, #2E9BFF); box-shadow: 0 2px 0 var(--ink); }
+html[data-cartoon] .invite-banner .ib-p { background: #fff; color: var(--ink); border: 2px solid var(--ink); border-radius: 10px; box-shadow: 0 2px 0 var(--ink); }
+
+/* ---------- Доска ---------- */
+html[data-cartoon] .board { border: 3px solid var(--ink); border-radius: 24px; padding: 10px; box-shadow: 0 5px 0 var(--ink), inset 0 3px 0 rgba(255, 255, 255, .5); }
+html[data-cartoon] .need { height: 36px; border: 2px solid var(--ink); border-radius: 13px; background: var(--pan-2, #fff); box-shadow: 0 2px 0 var(--ink); }
+html[data-cartoon] .need .nt { color: var(--text); font-weight: 800; }
+html[data-cartoon] .need .nb { height: 7px; border-radius: 4px; background: rgba(0, 0, 0, .14); border: 1.5px solid var(--ink); }
+html[data-cartoon] .need .nb b { background: linear-gradient(180deg, #9DF06A, #3DBB22); border-radius: 0; }
+html[data-cartoon] .need.low .nb b { background: linear-gradient(180deg, #FFD36A, #FF9A1F); }
+html[data-cartoon] .need.bad { border-color: var(--ink); background: #FFE1E4; }
+html[data-cartoon] .need.bad .nb b { background: linear-gradient(180deg, #FF8A98, #F2384F); }
+html[data-cartoon] .need.low.can, html[data-cartoon] .need.bad.can { animation: none; }
+
+/* Клетка: общая форма. Внешний вид — у каждого варианта свой */
+html[data-cartoon] .cell { border: 2px solid var(--ink); border-radius: 16px; justify-content: flex-start; padding-top: 0; overflow: visible; }
+html[data-cartoon] .cell .em { position: relative; z-index: 2; }
+html[data-cartoon] .cell .em .av { height: calc(var(--ch) * .9); filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .18)); }
+html[data-cartoon] .cell .nm { position: absolute; left: 50%; bottom: -4px; transform: translateX(-50%); z-index: 3; margin: 0; max-width: calc(100% + 4px); padding: 1px 6px 2px;
+  -webkit-line-clamp: 1; font-size: min(9.5px, calc(var(--ch) * .135)); font-weight: 900; white-space: nowrap; display: block; text-overflow: ellipsis;
+  color: #fff; background: var(--ink); border-radius: 8px; line-height: 1.25; }
+html[data-cartoon] .cell .lv { top: -5px; left: -5px; z-index: 4; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; font-size: 12.5px; font-weight: 900;
+  color: #fff; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--t1) 55%, #fff), var(--t1) 55%, var(--t2)); border: 2px solid var(--ink); text-shadow: var(--outline-s); box-shadow: 0 2px 0 var(--ink); }
+html[data-cartoon] .cell .rt { top: -6px; right: -5px; z-index: 4; border: 2px solid var(--ink); border-radius: 8px; padding: 0 4px; font-size: 8px; color: #fff; text-shadow: var(--outline-s); box-shadow: 0 2px 0 var(--ink); }
+html[data-cartoon] .cell .sh { border-radius: 14px; }
+html[data-cartoon] .cell.r1 .rt { background: var(--rare); }
+html[data-cartoon] .cell.r2 .rt { background: var(--epic); }
+html[data-cartoon] .cell.r3 .rt { background: linear-gradient(180deg, var(--gd1), var(--gd2)); color: #4a2a00; text-shadow: none; }
+html[data-cartoon] .cell.r1 { box-shadow: 0 3px 0 var(--ink), 0 0 0 3px var(--rare); }
+html[data-cartoon] .cell.r2 { box-shadow: 0 3px 0 var(--ink), 0 0 0 3px var(--epic); }
+html[data-cartoon] .cell.r3 { box-shadow: 0 3px 0 var(--ink), 0 0 0 3px var(--legend), 0 0 18px 2px rgba(255, 184, 0, .55); }
+html[data-cartoon] .cell.r3::before { border-radius: 14px; }
+html[data-cartoon] .cell.pair:not(.r1):not(.r2):not(.r3) { box-shadow: 0 3px 0 var(--ink), 0 0 0 3px rgba(255, 255, 255, .9); }
+html[data-cartoon] .cell.can-merge { border-color: var(--ink); box-shadow: 0 0 0 4px #FFE14D, 0 0 22px 4px rgba(255, 225, 77, .8); }
+html[data-cartoon] .cell.over { border-color: var(--ink); }
+html[data-cartoon] .cell.tapped { transform: scale(.93); }
+html[data-cartoon] .cell .cd { left: 10px; right: 10px; bottom: 12px; height: 4px; background: #fff; border: 1px solid var(--ink); z-index: 3; }
+html[data-cartoon] .ghost { box-shadow: 0 0 0 4px #FFE14D, 0 12px 0 rgba(0, 0, 0, .25) !important; border-color: var(--ink) !important; }
+html[data-cartoon] .cell.locked { border: 2px dashed color-mix(in srgb, var(--ink) 45%, transparent); background: rgba(255, 255, 255, .25); box-shadow: none; color: var(--muted); justify-content: center; padding-top: 0; }
+html[data-cartoon] .cell.locked .nm { position: static; transform: none; background: none; color: var(--muted); padding: 0; margin-top: 2px; }
+html[data-cartoon] .cell.locked .pd { display: none; }
+html[data-cartoon] .cell.lk-star { color: #E09400; }
+html[data-cartoon] .cell.lk-friend { color: #2E8BEB; }
+html[data-cartoon] .next-room { border: 2px solid var(--ink); border-radius: 15px; background: var(--pan-2, #fff); color: var(--muted); box-shadow: 0 3px 0 var(--ink); font-weight: 600; font-size: 12px; padding: 5px 10px 6px; }
+html[data-cartoon] .next-room b { color: var(--text); font-weight: 800; }
+html[data-cartoon] .next-room .bar { height: 8px; margin-top: 4px; border-radius: 5px; background: rgba(0, 0, 0, .12); border: 1.5px solid var(--ink); }
+html[data-cartoon] .next-room .bar i { background: linear-gradient(180deg, color-mix(in srgb, var(--t1) 60%, #fff), var(--t1)); border-radius: 0; }
+html[data-cartoon] .next-room.ready { box-shadow: 0 3px 0 var(--ink), 0 0 0 3px #FFE14D; }
+html[data-cartoon] .next-room.ready b { color: var(--t2); }
+html[data-cartoon] .hint { color: #fff; font-weight: 800; font-size: 12.5px; text-shadow: var(--outline-s); }
+
+/* ---------- Кнопки: объёмные «пластиковые» — заливка, блик сверху, толстая «губа» снизу ---------- */
+html[data-cartoon] .btn { border: 3px solid var(--ink); border-radius: 20px; font-weight: 900; font-size: 17px; color: #fff; text-shadow: var(--outline-s), 0 2px 0 var(--ink);
+  box-shadow: 0 5px 0 var(--ink), inset 0 -5px 0 rgba(0, 0, 0, .16), inset 0 3px 0 rgba(255, 255, 255, .45); overflow: hidden; isolation: isolate; }
+html[data-cartoon] .btn::before { content: ""; position: absolute; left: 10px; right: 10px; top: 4px; height: 38%; border-radius: 14px 14px 10px 10px; background: linear-gradient(180deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, .05)); z-index: -1; pointer-events: none; }
+html[data-cartoon] .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink), inset 0 -3px 0 rgba(0, 0, 0, .16), inset 0 3px 0 rgba(255, 255, 255, .4); }
+html[data-cartoon] .btn-primary { background: linear-gradient(180deg, var(--go1), var(--go2)); }
+html[data-cartoon] .btn-primary .cost { color: #FFF6B0; }
+html[data-cartoon] .btn-primary.poor { opacity: 1; filter: saturate(.55) brightness(.95); }
+html[data-cartoon] .btn-primary.full { background: linear-gradient(180deg, #E4E8F0, #B9C1D3); color: #4b5470; text-shadow: none; }
+html[data-cartoon] .btn-dark { background: linear-gradient(180deg, var(--bl1), var(--bl2)); }
+html[data-cartoon] .btn-ghost { background: linear-gradient(180deg, #fff, #E1E7F2); color: var(--ink); text-shadow: none; }
+html[data-cartoon] .btn-danger { background: linear-gradient(180deg, #FF8A98, #E5223C); }
+html[data-cartoon] .btn-rush { background: linear-gradient(180deg, #E4E8F0, #B9C1D3); color: #4b5470; text-shadow: none; font-size: 16px; }
+html[data-cartoon] .btn-rush.ready { background: linear-gradient(180deg, var(--bl1), var(--bl2)); color: #fff; text-shadow: var(--outline-s), 0 2px 0 var(--ink); }
+html[data-cartoon] .btn-rush.on { background: linear-gradient(180deg, var(--gd1), var(--gd2)); color: #fff; text-shadow: var(--outline-s), 0 2px 0 var(--ink); }
+html[data-cartoon] .btn-rush.wait { opacity: 1; }
+html[data-cartoon] .buy.glow::after, html[data-cartoon] .btn.glow::after { border-color: #FFE14D; border-width: 3px; }
+
+/* ---------- Нижнее меню ---------- */
+html[data-cartoon] .tabbar { border: 3px solid var(--ink); border-radius: 22px; padding: 4px 4px; background: var(--tabbar, linear-gradient(180deg, #fff, #E6EEFB)); box-shadow: 0 5px 0 var(--ink), var(--hi); }
+html[data-cartoon] .tab { color: var(--muted); font-weight: 800; border-radius: 15px; }
+html[data-cartoon] .tab span { font-size: 10.5px; font-weight: 900; }
+html[data-cartoon] .tab .ti { width: 28px; height: 28px; transition: transform .2s; }
+html[data-cartoon] .tab[data-view="office"] { --ic1: #FFB547; --ic2: #8AC8FF; --ic3: #fff; }
+html[data-cartoon] .tab[data-view="upgrades"] { --ic1: #fff; --ic2: #FF5C7A; --ic3: #4FB6FF; --ic4: #FFB300; }
+html[data-cartoon] .tab[data-view="rating"] { --ic1: #FFC93D; --ic2: #F08A24; --ic3: #fff; }
+html[data-cartoon] .tab[data-view="friends"] { --ic1: #4FB6FF; --ic2: #FF8FB1; --ic3: #fff; }
+html[data-cartoon] .tab[data-view="shop"] { --ic1: #FFD36A; --ic2: #E89A2C; --ic3: #fff; }
+html[data-cartoon] .tab.active { color: var(--ink); background: linear-gradient(180deg, color-mix(in srgb, var(--t1) 30%, #fff), color-mix(in srgb, var(--t1) 55%, #fff)); box-shadow: inset 0 0 0 2px var(--ink), 0 2px 0 var(--ink); }
+html[data-cartoon] .tab.active .ti { transform: translateY(-3px) scale(1.12); }
+html[data-cartoon] .tab-dot { width: 12px; height: 12px; background: #FF3B5C; border: 2px solid var(--ink); box-shadow: none; }
+
+/* ---------- Экраны-списки, карточки, пачки ---------- */
+html[data-cartoon] .view-title { align-self: flex-start; color: #fff; font-size: 22px; font-weight: 900; text-shadow: var(--outline), 0 3px 0 var(--ink); margin-left: 2px; }
+html[data-cartoon] .sub-title { color: var(--sub, #fff); font-weight: 900; text-shadow: var(--sub-sh, var(--outline-s)); }
+html[data-cartoon] .card, html[data-cartoon] .pack, html[data-cartoon] .stat, html[data-cartoon] .lb, html[data-cartoon] .hero-card, html[data-cartoon] .soon {
+  border: var(--bw) solid var(--ink); border-radius: 18px; background: var(--pan); box-shadow: var(--drop), var(--hi); color: var(--text); }
+html[data-cartoon] .card .d, html[data-cartoon] .pack .d, html[data-cartoon] .hero-card p, html[data-cartoon] .soon p, html[data-cartoon] .stat span, html[data-cartoon] .req { color: var(--muted); }
+html[data-cartoon] .card .t small, html[data-cartoon] .acc, html[data-cartoon] .req .ok, html[data-cartoon] .stat b, html[data-cartoon] .lb b { color: var(--t2); }
+html[data-cartoon] .card .ico, html[data-cartoon] .pack-ico { border: 2px solid var(--ink); border-radius: 13px; background: linear-gradient(180deg, #fff, var(--t3)); box-shadow: 0 2px 0 var(--ink); }
+html[data-cartoon] .card .buy, html[data-cartoon] .pack .buy, html[data-cartoon] .step .buy { border: 2.5px solid var(--ink); border-radius: 13px; background: linear-gradient(180deg, var(--go1), var(--go2)); color: #fff;
+  text-shadow: var(--outline-s); box-shadow: 0 3px 0 var(--ink), inset 0 2px 0 rgba(255, 255, 255, .5), inset 0 -3px 0 rgba(0, 0, 0, .15); font-weight: 900; }
+html[data-cartoon] .card .buy:active, html[data-cartoon] .pack .buy:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+html[data-cartoon] .card .buy.poor, html[data-cartoon] .pack .buy.poor { background: linear-gradient(180deg, #EEF1F6, #C9D0DE); color: #59627c; text-shadow: none; }
+html[data-cartoon] .card .buy.max { background: transparent; border-color: transparent; box-shadow: none; color: var(--t2); text-shadow: none; }
+html[data-cartoon] .pack .buy.soon-btn, html[data-cartoon] .card .buy.soon-btn { background: linear-gradient(180deg, var(--gd1), var(--gd2)); color: #4a2a00; text-shadow: none; border: 2.5px solid var(--ink); }
+html[data-cartoon] .card.cur { box-shadow: var(--drop), 0 0 0 3px var(--t1); }
+html[data-cartoon] .card.locked { opacity: .7; }
+html[data-cartoon] .card .joke { color: var(--text); }
+html[data-cartoon] .pack.p-free { box-shadow: var(--drop), 0 0 0 3px var(--go2), var(--hi); }
+html[data-cartoon] .pack.p-premium { background: linear-gradient(180deg, #F4FAFF, #CFE7FF); box-shadow: var(--drop), 0 0 0 3px var(--rare), var(--hi); }
+html[data-cartoon] .pack.p-premium .pack-ico { background: linear-gradient(180deg, #BFE6FF, #4FB6FF); }
+html[data-cartoon] .pack.p-star { background: linear-gradient(180deg, #FFF8DC, #FFE08A); box-shadow: var(--drop), 0 0 0 3px var(--legend), var(--hi); }
+html[data-cartoon] .pack.p-star .pack-ico { background: linear-gradient(180deg, var(--gd1), var(--gd2)); }
+html[data-cartoon] .odds, html[data-cartoon] .qbar, html[data-cartoon] .ladder-line { background: rgba(0, 0, 0, .12); border: 1.5px solid var(--ink); height: 10px; border-radius: 5px; }
+html[data-cartoon] .qbar i, html[data-cartoon] .ladder-line i { background: linear-gradient(180deg, var(--go1), var(--go2)); }
+html[data-cartoon] .odds .o0 { background: #A9B2C6; } html[data-cartoon] .odds .o3 { background: var(--legend); }
+html[data-cartoon] .odds-mm, html[data-cartoon] .odds-l { color: var(--muted); }
+html[data-cartoon] .l0 { color: var(--muted); } html[data-cartoon] .l1 { color: #1478D8; } html[data-cartoon] .l2 { color: #8136E8; } html[data-cartoon] .l3 { color: #B77400; }
+html[data-cartoon] .shards .pips i { height: 9px; background: rgba(0, 0, 0, .12); border: 1.5px solid var(--ink); }
+html[data-cartoon] .shards .pips i.on { background: var(--rare); border-color: var(--ink); box-shadow: none; }
+html[data-cartoon] .note-box { background: rgba(255, 255, 255, .6); border: 2px dashed color-mix(in srgb, var(--ink) 50%, transparent); color: var(--muted); }
+html[data-cartoon] .seg { border: 2.5px solid var(--ink); background: var(--pan-2, #fff); box-shadow: 0 3px 0 var(--ink); }
+html[data-cartoon] .seg button { color: var(--muted); font-weight: 800; }
+html[data-cartoon] .seg button.on { background: linear-gradient(180deg, color-mix(in srgb, var(--t1) 55%, #fff), var(--t1)); color: var(--t-ink); border: 2px solid var(--ink); text-shadow: none; }
+html[data-cartoon] .lb.me { box-shadow: var(--drop), 0 0 0 3px var(--t1); }
+html[data-cartoon] .step .st-ico { border: 2px solid var(--ink); background: #fff; }
+html[data-cartoon] .step.claimed .st-ico { background: linear-gradient(180deg, var(--go1), var(--go2)); color: #fff; border-color: var(--ink); }
+html[data-cartoon] .step.main .st-ico { box-shadow: 0 0 0 3px var(--rare); border-color: var(--ink); }
+html[data-cartoon] .step.reached .st-ico, html[data-cartoon] .step.ready .st-ico { border-color: var(--ink); box-shadow: 0 0 0 3px var(--go2); }
+html[data-cartoon] .step small, html[data-cartoon] .muted-c, html[data-cartoon] .loading { color: var(--muted); }
+html[data-cartoon] .error-box { border: var(--bw) solid var(--ink); background: #FFE7EA; color: var(--text); box-shadow: var(--drop); }
+
+/* ---------- Окна ---------- */
+html[data-cartoon] .modal { background: rgba(20, 24, 48, .55); }
+html[data-cartoon] .sheet { border: 3px solid var(--ink); border-radius: 26px; background: var(--sheet, linear-gradient(180deg, #fff 0%, #EEF4FF 100%)); color: var(--text); box-shadow: 0 6px 0 var(--ink), var(--hi); }
+html[data-cartoon] .sheet h2 { font-weight: 900; font-size: 22px; color: #fff; text-shadow: var(--outline), 0 3px 0 var(--ink); }
+html[data-cartoon] .sheet p, html[data-cartoon] .sheet .small-l { color: var(--muted); }
+html[data-cartoon] .sheet .amount { color: #FFD23F; font-weight: 900; text-shadow: var(--outline), 0 4px 0 var(--ink); }
+html[data-cartoon] .sheet .quote { border: 2px solid var(--ink); background: #FFF9E0; color: var(--text); }
+html[data-cartoon] .sheet .warn { color: #C25E00; }
+html[data-cartoon] .sheet .big-ico .av-big { filter: drop-shadow(0 4px 0 rgba(0, 0, 0, .15)); }
+html[data-cartoon] .path span, html[data-cartoon] .staff-row div { border: 2px solid var(--ink); background: #fff; }
+html[data-cartoon] .path em, html[data-cartoon] .staff-row small { color: var(--t2); }
+html[data-cartoon] .streak div { border: 2px solid var(--ink); background: #fff; color: var(--muted); box-shadow: 0 2px 0 var(--ink); }
+html[data-cartoon] .streak .done { background: #DFF7D2; color: #23801B; border-color: var(--ink); }
+html[data-cartoon] .streak .today { background: linear-gradient(180deg, var(--go1), var(--go2)); color: #fff; text-shadow: var(--outline-s); border-color: var(--ink); }
+html[data-cartoon] .streak .d7 { background: linear-gradient(180deg, #F1E6FF, #D4B8FF); box-shadow: 0 2px 0 var(--ink), 0 0 0 2px var(--epic); }
+html[data-cartoon] .rc-back { border: 2.5px solid var(--ink); background: repeating-linear-gradient(135deg, var(--t1) 0 7px, color-mix(in srgb, var(--t1) 70%, #fff) 7px 14px); }
+html[data-cartoon] .rc-front { border: 2.5px solid var(--ink); background: linear-gradient(180deg, #fff, var(--t3)); color: var(--text); }
+html[data-cartoon] .rc-front .lv { color: var(--t2); }
+html[data-cartoon] .rc.r1 .rc-front { border-color: var(--ink); box-shadow: 0 0 0 3px var(--rare); }
+html[data-cartoon] .rc.r2 .rc-front { border-color: var(--ink); box-shadow: 0 0 0 3px var(--epic); }
+html[data-cartoon] .rc.r3 .rc-front { border-color: var(--ink); box-shadow: 0 0 0 3px var(--legend), 0 0 22px rgba(255, 184, 0, .7); background: linear-gradient(180deg, #FFF8DC, #FFE08A); }
+html[data-cartoon] .rc-front .rt { border: 1.5px solid var(--ink); color: #fff; }
+html[data-cartoon] .toast { border: var(--bw) solid var(--ink); background: #fff; color: var(--ink); font-weight: 800; box-shadow: var(--drop); }
+html[data-cartoon] .tip { background: #FFF3B0; color: var(--ink); border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); }
+html[data-cartoon] .tip .n { background: var(--ink); color: #FFE14D; }
+html[data-cartoon] .tip.down::after { border-top-color: var(--ink); }
+html[data-cartoon] .tip.up::after { border-bottom-color: var(--ink); }
+html[data-cartoon] .bubble { background: #fff; color: var(--ink); border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
+html[data-cartoon] .float { color: #FFE14D; font-size: 21px; text-shadow: var(--outline), 0 3px 0 var(--ink); }
+html[data-cartoon] .float.lvl { background: linear-gradient(180deg, #fff27a, #FFC21A); color: var(--ink); border: 2px solid var(--ink); text-shadow: none; box-shadow: 0 3px 0 var(--ink); }
+html[data-cartoon] .float.up { color: #fff; text-shadow: var(--outline-s); }
+html[data-cartoon] .tfloat { color: #FFE14D; text-shadow: var(--outline-s), 0 2px 0 var(--ink); }
+html[data-cartoon] .tfloat .tcoin { border: 1.5px solid var(--ink); }
+html[data-cartoon] .rushx { color: #fff; font-weight: 900; font-size: 34px; text-shadow: var(--outline), 0 5px 0 var(--ink); }
+html[data-cartoon] .rushx b { color: #FFE14D; }
+
+/* Экран выбора бизнеса */
+html[data-cartoon] .choose-head .logo { border: 3px solid var(--ink); border-radius: 22px; background: linear-gradient(180deg, #FFE58A, #FFB300); box-shadow: 0 5px 0 var(--ink), var(--hi); }
+html[data-cartoon] .choose h1 { color: #fff; font-weight: 900; font-size: 34px; letter-spacing: 0; text-shadow: var(--outline), 0 4px 0 var(--ink); }
+html[data-cartoon] .choose h1 span { color: #FFE14D; }
+html[data-cartoon] .choose-head p { color: #fff; font-weight: 800; text-shadow: var(--outline-s); }
+html[data-cartoon] .biz { border: 3px solid var(--ink); border-radius: 20px; background: linear-gradient(180deg, #fff 0%, var(--t3) 100%); box-shadow: 0 5px 0 var(--ink), var(--hi); color: var(--text); }
+html[data-cartoon] .biz .bi { border: 2.5px solid var(--ink); border-radius: 16px; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--t1) 45%, #fff), var(--t1) 70%); box-shadow: 0 3px 0 var(--ink), inset 0 2px 0 rgba(255, 255, 255, .5); }
+html[data-cartoon] .biz h3 { font-weight: 900; color: var(--text); }
+html[data-cartoon] .biz p { color: var(--muted); }
+html[data-cartoon] .choose-foot { color: #fff; font-weight: 700; text-shadow: var(--outline-s); }
+html[data-cartoon] .sk { background: #fff; border: 2px solid var(--ink); box-shadow: 0 2px 0 var(--ink); }
+html[data-cartoon] .sk-txt small, html[data-cartoon] .sk-txt em { color: var(--muted); }
+html[data-cartoon] .sk-on { color: var(--t2); }
+
+@media (max-width: 350px) {
+  html[data-cartoon] .money { font-size: 31px; }
+  html[data-cartoon] .icon-btn { width: 37px; height: 37px; }
+  html[data-cartoon] .btn { font-size: 15px; }
+  html[data-cartoon] .cell .lv { width: 19px; height: 19px; font-size: 11px; top: -5px; left: -5px; }
+}
+
+/* =====================================================================
+   A «СОЛНЕЧНЫЙ ГОРОД»
+   ===================================================================== */
+html[data-theme="ca"] {
+  --ink: #1D2A4D; --bg: #5cc2ff; --text: #1D2A4D; --muted: #4F5D80; --dim: #6C7895;
+  --card: #fff; --card-2: #F2F8FF; --line: #1D2A4D; --accent: #2FA81C; --accent-ink: #fff;
+  --pan: linear-gradient(180deg, #FFFFFF 0%, #EAF4FF 100%); --pan-2: #fff; --pill: #fff; --hint: #fff;
+}
+html[data-theme="ca"] .sc-wall { background: linear-gradient(180deg, #3FB0FF 0%, #74CCFF 38%, #B9E8FF 70%, #DDF4FF 100%); }
+html[data-theme="ca"] .ca-sun { right: -34px; top: calc(-30px + var(--safe-t)); width: 190px; height: 190px; }
+html[data-theme="ca"] .ca-sun svg { width: 100%; height: 100%; }
+html[data-theme="ca"] .ca-sun .rays { fill: #FFE98A; opacity: .75; transform-origin: 0 0; animation: caSpin 40s linear infinite; }
+html[data-theme="ca"] .ca-sun .sun { fill: #FFD23F; stroke: #E59A00; stroke-width: 3; }
+html[data-theme="ca"] .ca-sun .sun-h { fill: #FFF4B8; }
+@keyframes caSpin { to { transform: rotate(360deg); } }
+html[data-theme="ca"] .ca-cl { width: 120px; will-change: transform; }
+html[data-theme="ca"] .ca-cl svg { width: 100%; display: block; }
+html[data-theme="ca"] .ca-cl .cl { fill: #fff; stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+html[data-theme="ca"] .ca-cl .cl-s { fill: #CFE7FA; }
+html[data-theme="ca"] .ca-cl.c1 { left: 10%; top: 13%; animation: caDrift 46s linear infinite; }
+html[data-theme="ca"] .ca-cl.c2 { left: 58%; top: 31%; width: 90px; opacity: .95; animation: caDrift 60s linear -20s infinite; }
+html[data-theme="ca"] .ca-cl.c3 { left: -8%; top: 52%; width: 140px; animation: caDrift 70s linear -40s infinite; }
+@keyframes caDrift { 0% { transform: translateX(-30vw); } 100% { transform: translateX(110vw); } }
+html[data-theme="ca"] .ca-far { left: 0; right: 0; bottom: 18%; width: 100%; height: 26%; }
+html[data-theme="ca"] .ca-far .cf { fill: #A7D8F5; }
+html[data-theme="ca"] .ca-street { left: 0; right: 0; bottom: 0; width: 100%; height: 26%; }
+html[data-theme="ca"] .ca-street .hs, html[data-theme="ca"] .ca-street .roof, html[data-theme="ca"] .ca-street .wn, html[data-theme="ca"] .ca-street .door,
+html[data-theme="ca"] .ca-street .awn, html[data-theme="ca"] .ca-street .trunk, html[data-theme="ca"] .ca-street .leaf { stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; }
+html[data-theme="ca"] .ca-street .h1 { fill: #FFD8A8; } html[data-theme="ca"] .ca-street .h2 { fill: #FFB4C2; } html[data-theme="ca"] .ca-street .h3 { fill: #B8E3FF; }
+html[data-theme="ca"] .ca-street .h4 { fill: #FFF1B3; } html[data-theme="ca"] .ca-street .h5 { fill: #C9F0B5; }
+html[data-theme="ca"] .ca-street .h-biz { fill: var(--t3); }
+html[data-theme="ca"] .ca-street .roof { fill: #EF6A52; }
+html[data-theme="ca"] .ca-street .wn { fill: #DFF3FF; stroke-width: 2; }
+html[data-theme="ca"] .ca-street .door { fill: #8A5A3B; }
+html[data-theme="ca"] .ca-street .awn { fill: var(--t1); }
+html[data-theme="ca"] .ca-street .awn-s { fill: #fff; opacity: .9; }
+html[data-theme="ca"] .ca-street .grass { fill: #7ED957; stroke: var(--ink); stroke-width: 2.5; }
+html[data-theme="ca"] .ca-street .road { fill: #8F9AB3; stroke: var(--ink); stroke-width: 2.5; }
+html[data-theme="ca"] .ca-street .road-l { stroke: #fff; stroke-width: 3; stroke-linecap: round; }
+html[data-theme="ca"] .ca-street .trunk { fill: #9B6A44; }
+html[data-theme="ca"] .ca-street .leaf { fill: #4CC24A; }
+html[data-theme="ca"] .ca-street .leaf-h { fill: #8FE36F; }
+
+/* Доска — «площадка» с травяной каймой, клетки — светлые плитки */
+html[data-theme="ca"] .board { background: linear-gradient(180deg, rgba(255, 255, 255, .92), rgba(232, 245, 255, .92)); }
+html[data-theme="ca"] .cell { background: linear-gradient(180deg, #FFFFFF 0%, #E6F2FF 100%); box-shadow: 0 3px 0 var(--ink), inset 0 2px 0 #fff; }
+html[data-theme="ca"] .cell .pd { display: block; position: absolute; left: 22%; right: 22%; bottom: 9%; height: 13%; border-radius: 50%; z-index: 0;
+  background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--t1) 55%, #fff), var(--t1)); border: 2px solid var(--ink); }
+html[data-theme="ca"] .cell.empty { background: linear-gradient(180deg, #DCEBFA, #EEF6FF); box-shadow: inset 0 3px 0 rgba(29, 42, 77, .14); border-color: rgba(29, 42, 77, .35); }
+html[data-theme="ca"] .cell.empty .pd { opacity: .25; border-color: transparent; }
+html[data-theme="ca"] .cell.r1 { background: linear-gradient(180deg, #F3FAFF, #BFE2FF); }
+html[data-theme="ca"] .cell.r2 { background: linear-gradient(180deg, #FAF4FF, #DEC6FF); }
+html[data-theme="ca"] .cell.r3 { background: linear-gradient(180deg, #FFFBE6, #FFDF7A); }
+html[data-theme="ca"] .tabbar { --tabbar: linear-gradient(180deg, #FFFFFF, #E3EFFC); }
+
+/* =====================================================================
+   B «СОЧНЫЙ ОФИС»
+   ===================================================================== */
+html[data-theme="cb"] {
+  --ink: #3A2314; --bg: #f4c98f; --text: #3A2314; --muted: #7A5A43; --dim: #8F7461;
+  --card: #FFF8EC; --card-2: #FFF1DC; --line: #3A2314; --accent: #2FA81C; --accent-ink: #fff;
+  --pan: linear-gradient(180deg, #FFFCF5 0%, #FFEFD6 100%); --pan-2: #FFF9EE; --pill: #FFF9EE; --hint: #fff;
+  --sheet: linear-gradient(180deg, #FFFCF5 0%, #FFEBCB 100%); --tabbar: linear-gradient(180deg, #FFFCF5, #FFE9C7);
+}
+html[data-theme="cb"] .sc-wall { background: color-mix(in srgb, var(--t1) 28%, #FFE9C9); }
+html[data-theme="cb"] .cb-wall { inset: 0; background:
+  repeating-linear-gradient(90deg, transparent 0 26px, color-mix(in srgb, var(--t1) 22%, transparent) 26px 40px),
+  radial-gradient(ellipse 80% 40% at 50% 15%, rgba(255, 255, 255, .55), transparent 70%); }
+html[data-theme="cb"] .cb-win { left: 50%; top: calc(4px + var(--safe-t)); width: 340px; margin-left: -170px; height: auto; opacity: .8; }
+html[data-theme="cb"] .cb-win .wf { fill: #fff; stroke: var(--ink); stroke-width: 4; }
+html[data-theme="cb"] .cb-win .sky { fill: #8ED3FF; stroke: var(--ink); stroke-width: 3; }
+html[data-theme="cb"] .cb-win .wc { fill: #BFE4FA; stroke: #6FB4DE; stroke-width: 1.5; }
+html[data-theme="cb"] .cb-win .cl { fill: #fff; stroke: #6FB4DE; stroke-width: 3; }
+html[data-theme="cb"] .cb-win .cl-s { fill: #DDF0FD; }
+html[data-theme="cb"] .cb-win .wbar { fill: #fff; stroke: var(--ink); stroke-width: 3; }
+html[data-theme="cb"] .cb-win .sill { fill: #E9C08E; stroke: var(--ink); stroke-width: 3.5; }
+html[data-theme="cb"] .cb-clock { left: 10px; top: 46%; width: 52px; height: 52px; }
+html[data-theme="cb"] .cb-clock .ck { fill: var(--t1); stroke: var(--ink); stroke-width: 3.5; }
+html[data-theme="cb"] .cb-clock .ck-f { fill: #fff; stroke: var(--ink); stroke-width: 2.5; }
+html[data-theme="cb"] .cb-clock .ck-h { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; fill: none; }
+html[data-theme="cb"] .cb-clock .ck-c { fill: var(--ink); }
+html[data-theme="cb"] .cb-plant { width: 110px; height: auto; transform-origin: 50% 100%; }
+html[data-theme="cb"] .cb-plant.pl1 { left: -22px; bottom: 12%; }
+html[data-theme="cb"] .cb-plant.pl2 { right: -26px; bottom: 15%; width: 96px; }
+html[data-theme="cb"] .cb-plant .lf { fill: #3FBF5A; stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+html[data-theme="cb"] .cb-plant .lf2 { fill: #62D86F; stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+html[data-theme="cb"] .cb-plant .vein { stroke: #2A8A3E; stroke-width: 2; fill: none; stroke-linecap: round; }
+html[data-theme="cb"] .cb-plant .pot { fill: #E2724C; stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+html[data-theme="cb"] .cb-plant .pot-r { fill: #F08F68; stroke: var(--ink); stroke-width: 3; }
+html[data-theme="cb"] .cb-plant .lf, html[data-theme="cb"] .cb-plant .lf2 { transform-origin: 50% 62%; }
+html[data-theme="cb"] .cb-plant.pl1 { animation: cbSway 6s ease-in-out infinite; }
+html[data-theme="cb"] .cb-plant.pl2 { animation: cbSway 7s ease-in-out -2s infinite; }
+@keyframes cbSway { 50% { transform: rotate(2.5deg); } }
+html[data-theme="cb"] .cb-floor { left: 0; right: 0; bottom: 0; height: 17%; border-top: 4px solid var(--ink);
+  background: linear-gradient(180deg, #8A4E2A 0 9px, transparent 9px), repeating-linear-gradient(90deg, #D99A5E 0 58px, #C9874B 58px 60px, #E3A869 60px 118px, #C9874B 118px 120px); box-shadow: inset 0 9px 0 #8A4E2A, inset 0 11px 0 var(--ink); }
+
+/* Доска — паркет в рамке; клетки — коврики */
+html[data-theme="cb"] .board { border-color: var(--ink); background:
+  linear-gradient(180deg, rgba(255, 255, 255, .14), transparent 40%),
+  repeating-linear-gradient(0deg, transparent 0 30px, rgba(90, 45, 15, .28) 30px 32px),
+  repeating-linear-gradient(90deg, #E7AE72 0 46px, #DB9E60 46px 92px);
+  box-shadow: 0 5px 0 var(--ink), inset 0 0 0 4px #B9743F, inset 0 3px 0 6px rgba(255, 255, 255, .15); }
+html[data-theme="cb"] .need { background: #FFF9EE; }
+html[data-theme="cb"] .cell { background: radial-gradient(ellipse 70% 55% at 50% 80%, color-mix(in srgb, var(--t1) 28%, #FFF8EC), #FFF8EC 75%);
+  box-shadow: 0 3px 0 var(--ink), inset 0 0 0 4px #FFF8EC, inset 0 0 0 6px color-mix(in srgb, var(--t1) 85%, #fff); }
+html[data-theme="cb"] .cell::after { content: ""; position: absolute; inset: 9px; border-radius: 10px; border: 1.5px dashed color-mix(in srgb, var(--t2) 55%, transparent); pointer-events: none; z-index: 0; }
+html[data-theme="cb"] .cell.pop::after { inset: 0; border: 0; }
+html[data-theme="cb"] .cell .pd { display: block; position: absolute; left: 16%; right: 16%; bottom: 11%; height: 14%; border-radius: 50%; background: rgba(58, 35, 20, .22); z-index: 0; }
+html[data-theme="cb"] .cell.empty { background: rgba(255, 248, 236, .28); border: 2px dashed rgba(58, 35, 20, .45); box-shadow: none; }
+html[data-theme="cb"] .cell.empty::after, html[data-theme="cb"] .cell.locked::after { display: none; }
+html[data-theme="cb"] .cell.empty .pd { display: none; }
+html[data-theme="cb"] .cell.r1 { background: radial-gradient(ellipse 70% 55% at 50% 80%, #BFE2FF, #F2F9FF 75%); box-shadow: 0 3px 0 var(--ink), 0 0 0 3px var(--rare), inset 0 0 0 4px #F2F9FF, inset 0 0 0 6px var(--rare); }
+html[data-theme="cb"] .cell.r2 { background: radial-gradient(ellipse 70% 55% at 50% 80%, #E0CBFF, #FAF5FF 75%); box-shadow: 0 3px 0 var(--ink), 0 0 0 3px var(--epic), inset 0 0 0 4px #FAF5FF, inset 0 0 0 6px var(--epic); }
+html[data-theme="cb"] .cell.r3 { background: radial-gradient(ellipse 70% 55% at 50% 80%, #FFE07A, #FFF9E0 75%); box-shadow: 0 3px 0 var(--ink), 0 0 0 3px var(--legend), 0 0 18px 2px rgba(255, 184, 0, .6), inset 0 0 0 4px #FFF9E0, inset 0 0 0 6px var(--legend); }
+html[data-theme="cb"] .cell.locked { background: rgba(255, 248, 236, .35); border-color: rgba(58, 35, 20, .5); color: #6B4A33; }
+html[data-theme="cb"] .cell.locked .nm { color: #5A3C28; }
+html[data-theme="cb"] .icon-btn { background: linear-gradient(180deg, #FFFCF5, #FFE6C2); }
+
+/* =====================================================================
+   C «КОНФЕТНЫЙ ПОП»
+   ===================================================================== */
+html[data-theme="cc"] {
+  --ink: #2A1052; --bg: #7a3cf0; --text: #2A1052; --muted: #5E4A86; --dim: #7B6AA0;
+  --card: #fff; --card-2: #F6F0FF; --line: #2A1052; --accent: #2FA81C; --accent-ink: #fff;
+  --pan: linear-gradient(180deg, #FFFFFF 0%, #F1E8FF 100%); --pan-2: #fff; --pill: #fff; --hint: #fff;
+  --sheet: linear-gradient(180deg, #FFFFFF 0%, #F1E6FF 100%);
+  --go1: #FF9AD5; --go2: #F0369A; --go-lip: #8E0E55;          /* «Нанять» — розовая конфета */
+  --bl1: #7DF5E8; --bl2: #12B9C9; --bl-lip: #0A6B78;
+}
+html[data-theme="cc"] .sc-wall { background:
+  radial-gradient(ellipse 70% 45% at 50% 0%, color-mix(in srgb, var(--t1) 70%, #fff) 0%, transparent 70%),
+  linear-gradient(165deg, #8A3CF5 0%, #6A3DF0 35%, #3F7BF2 70%, #19C6D6 100%); }
+html[data-theme="cc"] .cc-rays { left: 50%; top: -60vmax; width: 140vmax; height: 140vmax; margin-left: -70vmax; opacity: .22; will-change: transform;
+  background: repeating-conic-gradient(from 0deg, #fff 0 9deg, transparent 9deg 22.5deg); border-radius: 50%;
+  -webkit-mask: radial-gradient(circle, #000 10%, transparent 60%); mask: radial-gradient(circle, #000 10%, transparent 60%); animation: ccSpin 70s linear infinite; }
+@keyframes ccSpin { to { transform: rotate(360deg); } }
+html[data-theme="cc"] .cc-glow { left: 50%; top: -12%; width: 360px; height: 360px; margin-left: -180px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, .45), transparent 65%); }
+html[data-theme="cc"] .cc-dots, html[data-theme="cc"] .cc-stars { inset: 0; width: 100%; height: 100%; }
+html[data-theme="cc"] .cc-dots .c0 { fill: #FFE14D; } html[data-theme="cc"] .cc-dots .c1 { fill: #FF7AC6; } html[data-theme="cc"] .cc-dots .c2 { fill: #7DF5E8; } html[data-theme="cc"] .cc-dots .c3 { fill: #fff; }
+html[data-theme="cc"] .cc-dots { opacity: .75; }
+html[data-theme="cc"] .cc-stars .st { fill: #fff; transform-box: fill-box; transform-origin: center; animation: ccTw 2.6s ease-in-out infinite; }
+html[data-theme="cc"] .cc-stars .s1 { fill: #FFE98A; animation-delay: -.9s; }
+html[data-theme="cc"] .cc-stars .s2 { fill: #B9FFF6; animation-delay: -1.7s; }
+@keyframes ccTw { 50% { transform: scale(.45); opacity: .4; } }
+
+/* Доска — тёмная «коробка конфет», клетки — глянцевые мармеладки цвета бизнеса */
+html[data-theme="cc"] .board { border-color: var(--ink); background: linear-gradient(180deg, #3B1A78, #2A1158); box-shadow: 0 5px 0 var(--ink), inset 0 0 0 3px rgba(255, 255, 255, .35); }
+html[data-theme="cc"] .need { background: linear-gradient(180deg, #fff, #F1E8FF); }
+html[data-theme="cc"] .next-room { background: linear-gradient(180deg, #fff, #F1E8FF); }
+html[data-theme="cc"] .cell { background:
+  radial-gradient(ellipse 90% 55% at 50% 0%, rgba(255, 255, 255, .7), transparent 60%),
+  linear-gradient(180deg, color-mix(in srgb, var(--t1) 45%, #fff) 0%, var(--t1) 70%, var(--t2) 100%);
+  box-shadow: 0 3px 0 var(--ink), inset 0 -4px 0 rgba(0, 0, 0, .18), inset 0 2px 0 rgba(255, 255, 255, .6); }
+html[data-theme="cc"] .cell .pd { display: block; position: absolute; left: 8%; right: 8%; top: 5%; height: 26%; border-radius: 12px 12px 40% 40%; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0)); }
+html[data-theme="cc"] .cell.empty { background: #24104D; box-shadow: inset 0 4px 0 rgba(0, 0, 0, .35); border-color: rgba(255, 255, 255, .18); }
+html[data-theme="cc"] .cell.empty .pd { opacity: .12; }
+html[data-theme="cc"] .cell.r1 { background: radial-gradient(ellipse 90% 55% at 50% 0%, rgba(255, 255, 255, .7), transparent 60%), linear-gradient(180deg, #9FD8FF, #2E9BFF 70%, #1660C0); }
+html[data-theme="cc"] .cell.r2 { background: radial-gradient(ellipse 90% 55% at 50% 0%, rgba(255, 255, 255, .7), transparent 60%), linear-gradient(180deg, #DCC0FF, #A35CFF 70%, #6427C4); }
+html[data-theme="cc"] .cell.r3 { background: radial-gradient(ellipse 90% 55% at 50% 0%, rgba(255, 255, 255, .8), transparent 60%), linear-gradient(180deg, #FFF1A8, #FFC21A 70%, #C77F00); }
+html[data-theme="cc"] .cell.locked { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .35); color: #CDB8FF; }
+html[data-theme="cc"] .cell.locked .nm { color: #E2D6FF; }
+html[data-theme="cc"] .cell.lk-star { color: #FFE14D; } html[data-theme="cc"] .cell.lk-friend { color: #7DF5E8; }
+html[data-theme="cc"] .hint { color: #fff; }
+html[data-theme="cc"] .tabbar { --tabbar: linear-gradient(180deg, #FFFFFF, #EDE2FF); }
+html[data-theme="cc"] .icon-btn { background: linear-gradient(180deg, #fff, #EEE3FF); }
+html[data-theme="cc"] .ca-none { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-cartoon] .sc-x *, html[data-cartoon] .sc-x { animation: none !important; }
+}

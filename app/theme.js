@@ -3,6 +3,8 @@
    Скины: k «Полночь», m «Ночной Токио», b «Премиум-золото», c «Кибер-комикс» — открываются в игре (⚙️ → «Стили», условия — B.SKINS в balance.js).
    Выбор хранится в сохранении игрока (state.skin), здесь — только копия в localStorage, чтобы стиль встал до первой отрисовки.
    ?theme=mix|k|m|b|c в адресе — только для проверки: показывает стиль, ничего не сохраняет.
+   ?theme=ca|cb|cc — ПРОБНЫЕ варианты нового мультяшного основного стиля (A «Солнечный город», B «Сочный офис», C «Конфетный поп»),
+   только для просмотра: в «Стили» не добавлены (их нет в LIST), стили — themes-cartoon.css, у <html> ставится data-cartoon.
    Стили: общее и B, C — themes.css; K, M — themes4.css; основной — themes-main.css.
    Здесь: сцена-фон, свои SVG-иконки меню и шапки, эффекты (window.GameFx: монеты, вспышки, частицы).
    Подключается в <head> без defer — чтобы стиль встал до первой отрисовки. */
@@ -10,7 +12,8 @@
   'use strict';
   var KEY = 'startup_zero_theme';
   var LIST = [{ id: 'mix', n: 'Основной' }, { id: 'k', n: 'Полночь' }, { id: 'm', n: 'Ночной Токио' }, { id: 'c', n: 'Кибер-комикс' }, { id: 'b', n: 'Премиум-золото' }];
-  var BG = { mix: '#07090f', k: '#07090f', m: '#090a18', b: '#0d0a12', c: '#120a2a' };
+  var BG = { mix: '#07090f', k: '#07090f', m: '#090a18', b: '#0d0a12', c: '#120a2a', ca: '#5cc2ff', cb: '#f4c98f', cc: '#7a3cf0' };
+  var CARTOON = { ca: 1, cb: 1, cc: 1 };
   var root = document.documentElement;
 
   function valid(t) { return typeof t === 'string' && BG.hasOwnProperty(t); }
@@ -33,6 +36,7 @@
   }
   function apply() {
     root.setAttribute('data-theme', theme);
+    if (CARTOON[theme]) root.setAttribute('data-cartoon', theme); else root.removeAttribute('data-cartoon');
     var m = document.querySelector('meta[name="theme-color"]');
     if (m) m.setAttribute('content', BG[theme]);
   }
@@ -83,6 +87,80 @@
   var K_LINES = '<svg class="k-lines" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="kgl" x1="0" y1="0" x2="1" y2="0">' +
     '<stop offset="0" class="ks0"/><stop offset=".55" class="ks1"/><stop offset="1" class="ks0"/></linearGradient></defs>' +
     '<path d="M-30 190 C 110 90, 250 300, 430 150"/><path class="kl2" d="M-30 250 C 140 170, 230 330, 430 230"/><path d="M-30 690 C 130 600, 260 780, 430 640"/></svg>';
+  // ---------- Мультяшные сцены (пробные основные стили ca/cb/cc): SVG с толстым контуром, классы красятся в themes-cartoon.css ----------
+  function cloud(x, y, k) {
+    return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><path class="cl" d="M10 40 C-8 40 -6 16 14 18 C16 2 40 -2 48 12 C56 0 82 4 80 22 C98 22 98 42 82 42 Z"/>' +
+      '<path class="cl-s" d="M6 36 C20 44 70 44 88 34 C90 40 86 42 82 42 L10 40 C6 40 4 38 6 36Z"/></g>';
+  }
+  function houses(seed) {
+    // ряд домиков: фасады, крыши, окна; один — магазин с навесом цвета бизнеса
+    var r = rnd(seed), x = -6, out = '', i = 0, cols = ['h1', 'h2', 'h3', 'h4', 'h5'];
+    while (x < 410) {
+      var w = Math.round(44 + r() * 30), h = Math.round(54 + r() * 46), y = 168 - h, c = cols[Math.floor(r() * cols.length)];
+      var shop = i === 2;
+      out += '<g>';
+      if (r() < 0.5 && !shop) out += '<path class="roof" d="M' + (x - 5) + ' ' + y + ' L' + (x + w / 2) + ' ' + (y - 24) + ' L' + (x + w + 5) + ' ' + y + 'Z"/>';
+      else out += '<rect class="roof" x="' + (x - 3) + '" y="' + (y - 8) + '" width="' + (w + 6) + '" height="9" rx="3"/>';
+      out += '<rect class="hs ' + (shop ? 'h-biz' : c) + '" x="' + x + '" y="' + y + '" width="' + w + '" height="' + (h + 4) + '"/>';
+      for (var wy = y + 10; wy < 150; wy += 20) for (var wx = x + 8; wx < x + w - 14; wx += 18) out += '<rect class="wn" x="' + wx + '" y="' + wy + '" width="10" height="12" rx="2"/>';
+      if (shop) {
+        out += '<path class="awn" d="M' + (x - 4) + ' ' + (y + 6) + ' h' + (w + 8) + ' l-4 14 h-' + w + 'z"/>';
+        for (var sx = x; sx < x + w; sx += 12) out += '<path class="awn-s" d="M' + (sx + 2) + ' ' + (y + 6) + ' h6 l-1 14 h-6z"/>';
+        out += '<rect class="door" x="' + (x + w / 2 - 9) + '" y="' + (168 - 30) + '" width="18" height="30" rx="3"/>';
+      }
+      out += '</g>';
+      x += w + Math.round(2 + r() * 8); i++;
+    }
+    return out;
+  }
+  function tree(x, y, k) {
+    return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')"><rect class="trunk" x="-4" y="0" width="8" height="22" rx="2"/>' +
+      '<circle class="leaf" cx="0" cy="-8" r="17"/><circle class="leaf" cx="-12" cy="2" r="11"/><circle class="leaf" cx="12" cy="1" r="12"/><circle class="leaf-h" cx="-5" cy="-14" r="6"/></g>';
+  }
+  function star4(x, y, s, cls) {
+    return '<path class="' + cls + '" d="M' + x + ' ' + (y - s) + ' Q' + (x + s * .18) + ' ' + (y - s * .18) + ' ' + (x + s) + ' ' + y + ' Q' + (x + s * .18) + ' ' + (y + s * .18) + ' ' + x + ' ' + (y + s) +
+      ' Q' + (x - s * .18) + ' ' + (y + s * .18) + ' ' + (x - s) + ' ' + y + ' Q' + (x - s * .18) + ' ' + (y - s * .18) + ' ' + x + ' ' + (y - s) + 'Z"/>';
+  }
+  var CARTOON_SCENE = {
+    // A «Солнечный город»: небо, солнце с лучами, облака плывут, дальний город, улица с домиками и деревьями
+    ca: function () {
+      return '<div class="sc-x">' +
+        '<div class="ca-sun"><svg viewBox="-60 -60 120 120"><g class="rays">' + Array.apply(null, Array(12)).map(function (_, i) { return '<path d="M-5 -56 L5 -56 L2 -34 L-2 -34Z" transform="rotate(' + i * 30 + ')"/>'; }).join('') + '</g>' +
+        '<circle class="sun" r="26"/><circle class="sun-h" cx="-8" cy="-9" r="8"/></svg></div>' +
+        '<div class="ca-cl c1"><svg viewBox="-4 -4 106 52">' + cloud(0, 0, 1) + '</svg></div>' +
+        '<div class="ca-cl c2"><svg viewBox="-4 -4 106 52">' + cloud(0, 0, 1) + '</svg></div>' +
+        '<div class="ca-cl c3"><svg viewBox="-4 -4 106 52">' + cloud(0, 0, 1) + '</svg></div>' +
+        '<svg class="ca-far" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice">' + cityRects(23, 400, 0, 50, 130, false, 'cf') + '</svg>' +
+        '<svg class="ca-street" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice"><rect class="grass" x="-10" y="160" width="420" height="40"/>' + houses(7) +
+        tree(18, 150, 1.1) + tree(380, 152, 1) + tree(236, 156, .8) + '<rect class="road" x="-10" y="172" width="420" height="40"/><path class="road-l" d="M0 186 h30 M60 186 h30 M120 186 h30 M180 186 h30 M240 186 h30 M300 186 h30 M360 186 h30"/></svg>' +
+        '</div>';
+    },
+    // B «Сочный офис»: обои, большое окно с городом и облаками, часы, полка, растения, паркет
+    cb: function () {
+      return '<div class="sc-x"><i class="cb-wall"></i>' +
+        '<svg class="cb-win" viewBox="0 0 300 190"><rect class="wf" x="4" y="4" width="292" height="170" rx="14"/><rect class="sky" x="16" y="16" width="268" height="146" rx="6"/>' +
+        '<g class="wcity">' + cityRects(41, 268, 0, 30, 80, false, 'wc').replace(/y="(\d+(\.\d+)?)"/g, function (m, v) { return 'y="' + (+v - 38) + '"'; }) + '</g>' +
+        '<g transform="translate(40 34) scale(.55)">' + cloud(0, 0, 1) + '</g><g transform="translate(180 52) scale(.45)">' + cloud(0, 0, 1) + '</g>' +
+        '<rect class="wbar" x="146" y="16" width="8" height="146"/><rect class="wbar" x="16" y="86" width="268" height="7"/><rect class="sill" x="-2" y="166" width="304" height="16" rx="6"/></svg>' +
+        '<svg class="cb-clock" viewBox="-30 -30 60 60"><circle class="ck" r="25"/><circle class="ck-f" r="19"/><path class="ck-h" d="M0 0 L0 -12 M0 0 L9 4"/><circle class="ck-c" r="2.6"/></svg>' +
+        '<svg class="cb-plant pl1" viewBox="0 0 120 200"><path class="lf" d="M60 120 C20 110 0 70 14 40 C40 50 58 80 60 120Z"/><path class="lf" d="M60 120 C100 104 120 60 104 30 C80 44 62 80 60 120Z"/>' +
+        '<path class="lf2" d="M60 124 C40 80 44 30 62 8 C80 36 78 84 60 124Z"/><path class="vein" d="M60 120 C30 100 22 70 18 48 M60 120 C92 100 100 64 100 38 M60 122 C58 90 60 50 62 14"/>' +
+        '<path class="pot" d="M30 120 H90 L82 190 H38 Z"/><rect class="pot-r" x="26" y="116" width="68" height="14" rx="5"/></svg>' +
+        '<svg class="cb-plant pl2" viewBox="0 0 120 200"><path class="lf" d="M60 130 C30 120 18 90 26 62 C46 74 58 100 60 130Z"/><path class="lf2" d="M60 130 C88 116 100 86 94 58 C74 70 62 100 60 130Z"/>' +
+        '<path class="pot" d="M34 128 H86 L80 190 H40 Z"/><rect class="pot-r" x="30" y="124" width="60" height="13" rx="5"/></svg>' +
+        '<i class="cb-floor"></i></div>';
+    },
+    // C «Конфетный поп»: лучи «солнышка» крутятся, звёздочки мерцают, конфетти
+    cc: function () {
+      var st = '', r = rnd(5);
+      for (var i = 0; i < 16; i++) st += star4(Math.round(r() * 400), Math.round(r() * 800), Math.round(5 + r() * 9), 'st s' + (i % 3));
+      var dots = '';
+      for (var j = 0; j < 22; j++) dots += '<circle class="cf c' + (j % 4) + '" cx="' + Math.round(r() * 400) + '" cy="' + Math.round(r() * 800) + '" r="' + (2 + r() * 3).toFixed(1) + '"/>';
+      return '<div class="sc-x"><i class="cc-rays"></i><i class="cc-glow"></i>' +
+        '<svg class="cc-dots" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice">' + dots + '</svg>' +
+        '<svg class="cc-stars" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice">' + st + '</svg></div>';
+    }
+  };
   function sceneX() {
     if (theme === 'k') return '<div class="sc-x"><i class="ka1"></i><i class="ka2"></i>' + K_LINES + '</div>';
     if (theme === 'mix') return '<div class="sc-x"><i class="ka1"></i><i class="ka2"></i>' + K_LINES +
@@ -93,6 +171,7 @@
       '<svg class="m-near" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice">' + cityRects(17, 400, 0, 40, 120, true, 'mn') + '</svg>' +
       '<i class="sg sg1"></i><i class="sg sg2"></i><i class="sg sg3"></i><i class="sg sgb"></i><i class="street"></i><i class="refl"></i>' +
       '<i class="rain r1"></i><i class="rain r2"></i></div>';
+    if (CARTOON[theme]) return CARTOON_SCENE[theme]();
     return '';
   }
   function sceneSync() {
@@ -351,7 +430,7 @@
     },
     // аврал: крупная надпись в своём стиле
     rush: function () {
-      var t = { mix: 'Аврал <b>×2</b>', k: 'Аврал <b>×2</b>', m: '<i>残業</i>Аврал ×2' }[theme];
+      var t = { mix: 'Аврал <b>×2</b>', k: 'Аврал <b>×2</b>', m: '<i>残業</i>Аврал ×2', ca: 'Аврал <b>×2</b>', cb: 'Аврал <b>×2</b>', cc: 'Аврал <b>×2</b>' }[theme];
       if (!t) return;
       floatEl(window.innerWidth / 2, window.innerHeight * 0.42, t, 'rushx');
     }
