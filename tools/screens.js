@@ -251,7 +251,7 @@ window.__mockNet = {
   }
 
   // 9. Узкий и широкий экраны: нет горизонтального скролла
-  for (const th of ['mix', 'k', 'm', 'c', 'b']) for (const w of [320, 390, 430]) {
+  for (const th of ['main', 'neon', 'collection']) for (const w of [320, 390, 430]) {
     const { ctx: c2, page: p2 } = await newPage({ viewport: { width: w, height: w === 320 ? 568 : 760 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 }, { query: '?theme=' + th });
     const w0 = w; { const w = (th ? th + ' ' : '') + w0;
     await noHScroll(p2, `выбор ${w}px`);
@@ -317,14 +317,15 @@ window.__mockNet = {
     await c6.close();
   }
 
-  // 11. Стили: основной (mix) и скины K, M, C, B — скриншоты в docs/screens/themes/ + коллаж final-style.png
+  // 11. Стили-комплекты: основной (main, с пробными мультяшными сотрудниками ?preview_staff=1), «Ночной неон» (neon) и «Коллекция» (collection) —
+  //     скриншоты в docs/screens/themes/<комплект>-*.jpg + коллаж final-style.png
   const OFFICE = {
     it: [25, 4, 13, 3, 12, 2, 2, 31, 1, 1, 0, 0],
     coffee: [5, 14, 3, 23, 2, 2, 12, 1, 1, 34, 0, 0],
     barber: [26, 5, 4, 14, 3, 3, 2, 22, 1, 1, 11, 0]
   };
-  for (const th of ['mix', 'k', 'm', 'c', 'b']) {
-    const { ctx: ct, page: pt } = await newPage(iphone, { query: '?theme=' + th });
+  for (const th of ['main', 'neon', 'collection']) {
+    const { ctx: ct, page: pt } = await newPage(iphone, { query: '?theme=' + th + (th === 'main' ? '&preview_staff=1' : '') });
     const ts = name => pt.screenshot({ path: path.join(TOUT, th + '-' + name + '.jpg'), type: 'jpeg', quality: 82 });
     await ts('1-choose');
     await noHScroll(pt, th + ' выбор');
@@ -392,18 +393,19 @@ window.__mockNet = {
     await ts('8-upgrades');
     await ct.close();
   }
-  // итоговый коллаж: основной стиль (6 экранов) + 4 скина (офис IT)
+  // итоговый коллаж: основной комплект (6 экранов) + «Ночной неон» и «Коллекция» (офис IT)
   {
     const ctx = await browser.newContext({ viewport: { width: 1980, height: 1220 }, deviceScaleFactor: 1.25 });
     const pg = await ctx.newPage();
     const img = n => 'data:image/jpeg;base64,' + fs.readFileSync(path.join(TOUT, n + '.jpg')).toString('base64');
     const fig = (n, c) => `<figure><figcaption>${c}</figcaption><img src="${img(n)}"></figure>`;
-    const main = [['mix-2-office-it', 'Офис IT'], ['mix-2-office-coffee', 'Кофейня'], ['mix-2-office-barber', 'Барбершоп'], ['mix-3-merge', 'Слияние'], ['mix-5-agency', 'Агентство'], ['mix-12-skins', 'Экран «Стили»']].map(x => fig(...x)).join('');
-    const skins = [['k', 'K · Полночь — 1 друг'], ['m', 'M · Ночной Токио — 3 друга'], ['c', 'C · Кибер-комикс — ⭐ 50'], ['b', 'B · Премиум-золото — ⭐ 100']].map(([t, c]) => fig(t + '-2-office-it', c)).join('');
+    const main = [['main-2-office-it', 'Офис IT'], ['main-2-office-coffee', 'Кофейня'], ['main-2-office-barber', 'Барбершоп'], ['main-3-merge', 'Слияние'], ['main-5-agency', 'Агентство'], ['main-12-skins', 'Экран «Стили»']].map(x => fig(...x)).join('');
+    const kits = [['neon-2-office-it', 'Ночной неон · офис IT'], ['collection-2-office-it', 'Коллекция · офис IT'], ['neon-3-merge', 'Ночной неон · слияние'], ['collection-3-merge', 'Коллекция · слияние'], ['neon-5-agency', 'Ночной неон · агентство'], ['collection-5-agency', 'Коллекция · агентство']].map(x => fig(...x)).join('');
     await pg.setContent(`<html><body style="margin:0;background:#0b0c12;font:700 22px -apple-system,Segoe UI,Roboto,sans-serif;color:#fff">
-      <style>.r{display:grid;grid-template-columns:repeat(6,300px);gap:20px;padding:0 20px 18px}figure{margin:0}figcaption{padding:8px 2px;text-align:center}img{width:300px;border-radius:22px;display:block;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+      <style>.r{display:grid;grid-template-columns:repeat(6,300px);gap:20px;padding:0 20px 18px}figure{margin:0}figcaption{padding:8px 2px;text-align:center;font-size:19px}img{width:300px;border-radius:22px;display:block;box-shadow:0 8px 30px rgba(0,0,0,.6)}
       h1{font-size:26px;margin:0;padding:18px 20px 6px}h2{font-size:18px;color:#9aa3bb;margin:0;padding:4px 20px 0;font-weight:600}</style>
-      <h1>Стартап с нуля — основной стиль и скины</h1><h2>Основной (у всех, бесплатно)</h2><div class="r">${main}</div><h2>Скины (открываются в ⚙️ → Стили)</h2><div class="r">${skins}</div></body></html>`);
+      <h1>Стартап с нуля — стили-комплекты «оформление + сотрудники»</h1><h2>Основной «Сочный офис» — у всех, бесплатно (сотрудники — пробные мультяшные картинки)</h2><div class="r">${main}</div>
+      <h2>Платные комплекты: «Ночной неон» — 3 друга или ⭐ 75, «Коллекция» — ⭐ 150 (сотрудники пока нарисованы кодом — картинки будут позже)</h2><div class="r">${kits}</div></body></html>`);
     await pg.waitForTimeout(400);
     const h = await pg.evaluate(() => document.body.scrollHeight);
     await pg.setViewportSize({ width: 1980, height: h });
@@ -415,7 +417,7 @@ window.__mockNet = {
     const ctx = await browser.newContext({ viewport: { width: 1240, height: 900 }, deviceScaleFactor: 1.5 });
     const pg = await ctx.newPage();
     pg.on('pageerror', e => problems.push('[pageerror] лист: ' + e.message));
-    await pg.goto(URL + '?theme=mix'); await pg.waitForTimeout(300);
+    await pg.goto(URL + '?theme=main'); await pg.waitForTimeout(300);
     const dup = await pg.evaluate(() => {
       const C = window.CONTENT, A = window.GameAvatars, seen = {}, d = [];
       document.body.innerHTML = '<div id="s"></div>'; document.body.style.overflow = 'visible';
