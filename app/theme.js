@@ -24,18 +24,14 @@
   function read() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
   function write(t) { try { localStorage.setItem(KEY, t); } catch (e) {} }
 
-  // ВРЕМЕННО (выбор владельца): варианты оформления «Коллекции». 1 — «Бутик игрушек» (сейчас выбран), 2 — «Блайнд-бокс студия»,
-  // 3 — «Капсульный автомат». Посмотреть: ?theme=collection2 / ?theme=collection3 (в «Стили» не добавлены). CSS — themes-collection<N>.css.
-  var CV_BG = { 1: '#15183A', 2: '#FFD3E2', 3: '#E8343F' };
+  // «Коллекция» — вид «Бутик игрушек» (выбор владельца 27.11): CSS themes-collection1.css (селекторы html[data-cv="1"]).
   var cvar = 1;
   var theme = upgrade(read()), forced = null;
   try {
     var q = new URLSearchParams(location.search).get('theme');
-    var mq = q && /^collection([123])$/.exec(q.toLowerCase());
-    if (mq) { forced = 'collection'; cvar = +mq[1]; }
-    else if (q != null && valid(upgrade(q.toLowerCase()))) forced = upgrade(q.toLowerCase());
+    if (q != null && valid(upgrade(q.toLowerCase()))) forced = upgrade(q.toLowerCase());
   } catch (e) {}
-  BG.collection = CV_BG[cvar];
+  BG.collection = '#15183A';
   if (!valid(theme)) theme = 'main'; // неизвестное → основной
   if (forced) theme = forced;
 
