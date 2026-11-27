@@ -454,20 +454,21 @@
     var all = window.CONTENT && window.CONTENT.STAFF_IMG, list = all && all[kit];
     return !!(Array.isArray(list) && list.indexOf(biz + '-' + lvl) >= 0);
   }
-  // ВРЕМЕННО, только для просмотра стилей: ?preview_staff=1 — в основном комплекте вместо SVG мультяшные персонажи с пробного листа
+  // ВРЕМЕННО, только для просмотра стилей: ?preview_staff=1 — в основном комплекте (и в «Коллекции») вместо SVG персонажи с пробного листа
   // (docs/staff-concepts/2-multyashnyj-OSNOVNOJ.jpg, нарезка — tools/staff-preview.py → img/staff-preview/1..12.webp).
   // Уровни 1–6 — персонажи своего бизнеса, 7 — бизнесмен, 8 — босс в короне.
   var PREVIEW = false;
   try { PREVIEW = new URLSearchParams(location.search).get('preview_staff') === '1'; } catch (e) {}
   var PV = { coffee: [1, 2], it: [3, 4], barber: [5], burger: [6], auto: [7], fitness: [8], gamedev: [9], delivery: [10] };
-  function previewSrc(biz, lvl) {
+  // для «Коллекции» — 3D-фигурки с листа docs/staff-concepts/1-figurki-3d.jpg (tools/staff-preview-3d.py → img/staff-preview-3d/)
+  function previewSrc(biz, lvl, kit) {
     var n = lvl >= 8 ? 12 : lvl === 7 ? 11 : (PV[biz] || [1])[(lvl - 1) % (PV[biz] || [1]).length];
-    return 'img/staff-preview/' + n + '.webp';
+    return (kit === 'collection' ? 'img/staff-preview-3d/' : 'img/staff-preview/') + n + '.webp';
   }
   // Главная функция: картинка сотрудника комплекта (img/staff/<kit>/*.webp, если есть, иначе SVG)
   function avatar(biz, lvl, rar, cls, kit) {
     lvl = Math.max(1, Math.min(8, lvl | 0)); kit = kitNow(kit);
-    var src = PREVIEW && kit === 'main' ? previewSrc(biz, lvl) : hasImg(kit, biz, lvl) ? 'img/staff/' + kit + '/' + biz + '-' + lvl + '.webp' : svgUri(biz, lvl, rar);
+    var src = PREVIEW && (kit === 'main' || kit === 'collection') ? previewSrc(biz, lvl, kit) : hasImg(kit, biz, lvl) ? 'img/staff/' + kit + '/' + biz + '-' + lvl + '.webp' : svgUri(biz, lvl, rar);
     return '<img class="av' + (cls ? ' ' + cls : '') + '" src="' + src + '" alt="" draggable="false" decoding="async">';
   }
   function mode() { try { return localStorage.getItem(KEY) === 'emoji' ? 'emoji' : 'art'; } catch (e) { return 'art'; } }

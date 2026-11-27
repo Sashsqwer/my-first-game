@@ -24,11 +24,18 @@
   function read() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
   function write(t) { try { localStorage.setItem(KEY, t); } catch (e) {} }
 
+  // ВРЕМЕННО (выбор владельца): варианты оформления «Коллекции». 1 — «Бутик игрушек» (сейчас выбран), 2 — «Блайнд-бокс студия»,
+  // 3 — «Капсульный автомат». Посмотреть: ?theme=collection2 / ?theme=collection3 (в «Стили» не добавлены). CSS — themes-collection<N>.css.
+  var CV_BG = { 1: '#15183A', 2: '#FFD3E2', 3: '#E8343F' };
+  var cvar = 1;
   var theme = upgrade(read()), forced = null;
   try {
     var q = new URLSearchParams(location.search).get('theme');
-    if (q != null && valid(upgrade(q.toLowerCase()))) forced = upgrade(q.toLowerCase());
+    var mq = q && /^collection([123])$/.exec(q.toLowerCase());
+    if (mq) { forced = 'collection'; cvar = +mq[1]; }
+    else if (q != null && valid(upgrade(q.toLowerCase()))) forced = upgrade(q.toLowerCase());
   } catch (e) {}
+  BG.collection = CV_BG[cvar];
   if (!valid(theme)) theme = 'main'; // неизвестное → основной
   if (forced) theme = forced;
 
@@ -41,6 +48,8 @@
   function apply() {
     root.setAttribute('data-theme', theme);
     if (CARTOON[theme]) root.setAttribute('data-cartoon', theme); else root.removeAttribute('data-cartoon');
+    if (theme === 'collection') root.setAttribute('data-cv', cvar); else root.removeAttribute('data-cv');
+    root.setAttribute('data-cvp', cvar); // превью «Коллекции» на экране «Стили» — в выбранном варианте
     root.style.colorScheme = theme === 'neon' ? 'dark' : 'light';
     var m = document.querySelector('meta[name="theme-color"]');
     if (m) m.setAttribute('content', BG[theme]);
@@ -131,6 +140,18 @@
     },
     // «Коллекция»: студийный фон-«циклорама», мягкие софиты сверху, полки коллекционера (в лёгком расфокусе), стол-подиум
     collection: function () {
+      if (cvar === 1) // «Бутик игрушек»: бархатный занавес, латунная рампа с прожекторами, стеклянные витрины по бокам, лаковый пол
+        return '<div class="sc-x"><i class="bt-wall"></i><i class="bt-folds"></i><i class="bt-beam b1"></i><i class="bt-beam b2"></i><i class="bt-beam b3"></i>' +
+          '<i class="bt-rail"></i><i class="bt-lamp l1"></i><i class="bt-lamp l2"></i><i class="bt-lamp l3"></i>' +
+          '<svg class="bt-case c1" viewBox="0 0 200 84">' + shelf(11) + '</svg><svg class="bt-case c2" viewBox="0 0 200 84">' + shelf(29) + '</svg>' +
+          '<i class="co-dust d1"></i><i class="co-dust d2"></i><i class="bt-floor"></i></div>';
+      if (cvar === 2) // «Блайнд-бокс студия»: яркая стена с перфопанелью, цветные полки с коробками, лучи-«санбёрст»
+        return '<div class="sc-x"><i class="bb-wall"></i><i class="bb-burst"></i><i class="bb-peg"></i>' +
+          '<svg class="bb-shelf s1" viewBox="0 0 200 84">' + shelf(11) + '</svg><svg class="bb-shelf s2" viewBox="0 0 200 84">' + shelf(29) + '</svg>' +
+          '<i class="bb-conf c1"></i><i class="bb-conf c2"></i><i class="bb-floor"></i></div>';
+      if (cvar === 3) // «Капсульный автомат»: корпус автомата, хромированные полосы, капсулы, лампочки
+        return '<div class="sc-x"><i class="gc-wall"></i><i class="gc-dots"></i><i class="gc-stripe"></i><i class="gc-bulbs"></i>' +
+          '<i class="gc-cap k1"></i><i class="gc-cap k2"></i><i class="gc-cap k3"></i><i class="gc-cap k4"></i><i class="gc-floor"></i></div>';
       return '<div class="sc-x"><i class="co-wall"></i><i class="co-spot s1"></i><i class="co-spot s2"></i>' +
         '<svg class="co-shelf sf1" viewBox="0 0 200 84">' + shelf(11) + '</svg>' +
         '<svg class="co-shelf sf2" viewBox="0 0 200 84">' + shelf(29) + '</svg>' +
